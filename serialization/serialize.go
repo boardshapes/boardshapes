@@ -1,0 +1,5 @@
+package serialization
+
+func BinarySerialize() {
+
+}
