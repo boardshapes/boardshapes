@@ -85,11 +85,27 @@ The color is represented by a 32-bit RGBA color.
 
 ### [10] Shape Image
 
-WIP
+Represents a shape's appearance as a PNG image.
+
+It is not recommended to use this chunk type while also using "[11] Shape Mask".
+
+#### Structure
+
+The value of the first 4 bytes in the chunk is the shape's unique number as a 32-bit unsigned integer.
+
+The next 4 bytes are the PNG image's size as a 32-bit unsigned integer.
+
+The rest of the data in the chunk is the shape's image in PNG format.
 
 ---
 
 ### [11] Shape Mask
+
+Represents a shape's appearance as a mask.
+
+It is not recommended to use this chunk type while also using "[10] Shape Image".
+
+#### Structure
 
 WIP
 
