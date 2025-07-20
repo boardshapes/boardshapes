@@ -1,5 +1,7 @@
 # Boardshapes Serialization Specification
 
+**For Version 0.1.0**
+
 This is the specification for the formats that Boardshapes data can be serialized to and serialized from.
 
 ## Binary
@@ -16,7 +18,7 @@ The header of each section below is in the format [`chunk_number`] `chunk_name`.
 
 The version of the Boardshapes package used to generate this data.
 
-This chunk should not appear more than once. It is very inadvisable to not have this chunk, as it may make the data impossible to deserialize (with the latest package version) in the future.
+This chunk should not appear more than once. **It is very inadvisable to not have this chunk,** as it may make the data impossible to deserialize (with the latest package version) in the future.
 
 #### Structure
 
@@ -29,7 +31,7 @@ Examples:
 
 ---
 
-### [1] Color Table
+### [2] Color Table
 
 Lists all possible colors that shapes may be identified by, and their names.
 
@@ -37,7 +39,7 @@ This chunk should not appear more than once.
 
 #### Structure
 
-The value of the first byte of the chunk should be the number of colors in this color table. Proceeding that, each color in the table should be represented by a 32-bit RGBA color followed by the name of the color a null-terminated UTF-8 string.
+The value of the first byte of the chunk should be the number of colors in this color table. Following that, each color in the table should be represented by a 32-bit RGBA color followed by the name of the color a null-terminated UTF-8 string.
 
 Example Color Table chunk:
 
@@ -47,13 +49,51 @@ Example Color Table chunk:
 
 ![Color Table Chunk Diagram](./spec_img/color_table.png)
 
-### [8] Shape Path
+---
 
-WIP
+### [8] Shape Geometry
+
+Represents a shape's position followed by its vertices/path.
+
+#### Structure
+
+The value of the first 4 bytes in the chunk is the shape's unique number as a 32-bit unsigned integer.
+
+The next 8 bytes are the X and Y positions of the shape's top-left corner in the source image, both of them as 32-bit integers.
+
+The next 4 bytes are the number of vertices in the shape as a 32-bit unsigned integer.
+
+The remaining `(number of vertices) * 8` bytes are the X and Y positions of each vertex in the shape, both of them as 32-bit integers.
+
+[Insert Diagram Here?]
+
+---
 
 ### [9] Shape Color
 
+Represents a shape's color.
+
+It is recommended to have this color match one in the color table.
+
+#### Structure
+
+The value of the first 4 bytes in the chunk is the shape's unique number as a 32-bit unsigned integer.
+
+The color is represented by a 32-bit RGBA color.
+
+---
+
+### [10] Shape Image
+
 WIP
+
+---
+
+### [11] Shape Mask
+
+WIP
+
+---
 
 ## JSON
 
