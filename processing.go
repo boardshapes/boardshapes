@@ -12,21 +12,7 @@ import (
 	"golang.org/x/image/draw"
 )
 
-const MINIMUM_NUMBER_OF_PIXELS_FOR_VALID_REGION = 50
-
-var Red color.NRGBA = color.NRGBA{uint8(255), uint8(0), uint8(0), uint8(255)}
-var Green color.NRGBA = color.NRGBA{uint8(0), uint8(255), uint8(0), uint8(255)}
-var Blue color.NRGBA = color.NRGBA{uint8(0), uint8(0), uint8(255), uint8(255)}
-var White color.NRGBA = color.NRGBA{uint8(255), uint8(255), uint8(255), uint8(255)}
-var Black color.NRGBA = color.NRGBA{uint8(0), uint8(0), uint8(0), uint8(255)}
-var Blank color.NRGBA = color.NRGBA{uint8(0), uint8(0), uint8(0), uint8(0)}
-
-func absDiff[T int | int8 | int16 | int32 | int64 | uint | uint8 | uint16 | uint32 | uint64](a T, b T) T {
-	if a > b {
-		return a - b
-	}
-	return b - a
-}
+const version = "0.1.0"
 
 func GetNRGBA(c color.Color) color.NRGBA {
 	var r, g, b, a uint32
@@ -47,8 +33,6 @@ func GetNRGBA(c color.Color) color.NRGBA {
 // func manhattanDistance(a Vertex, b Vertex) int {
 // 	return absDiff(int(a.X), int(b.X)) + absDiff(int(a.Y), int(b.Y))
 // }
-
-var ErrImageTooWide = errors.New("image is too wide")
 
 type RegionPixel byte
 
@@ -230,18 +214,6 @@ func (region *Region) CreateShape() (shape []Vertex, err error) {
 	}
 }
 
-func DotProduct(x1, x2, y1, y2 float64) float64 {
-	answer := (x1 * x2) + (y1 * y2)
-	return answer
-}
-
-func (v1 Vertex) DirectionTo(v2 Vertex) (x, y float64) {
-	answerX := float64(v2.X - v1.X)
-	answerY := float64(v2.Y - v1.Y)
-	mag := math.Sqrt((answerX * answerX) + (answerY * answerY))
-	return (answerX / mag), (answerY / mag)
-}
-
 func StraightOpt(sortedVertexShape []Vertex) []Vertex {
 	for i := 2; i < len(sortedVertexShape); i++ {
 		x1, y1 := sortedVertexShape[i-2].DirectionTo(sortedVertexShape[i-1])
@@ -254,50 +226,37 @@ func StraightOpt(sortedVertexShape []Vertex) []Vertex {
 	return sortedVertexShape
 }
 
-func PrintMatrix(matrix [][]bool) {
-	for _, s := range matrix {
-		for _, v := range s {
-			if v {
-				fmt.Print("██")
-			} else {
-				fmt.Print("░░")
-			}
-		}
-		fmt.Println()
-	}
-}
-
-func MatrixToImage(matrix [][]bool) *image.Paletted {
-	maxX, maxY := len(matrix), len(matrix[0])
-	result := image.NewPaletted(image.Rect(0, 0, maxX, maxY), color.Palette{White, Black})
-	for x := uint16(0); x < uint16(maxX); x++ {
-		for y := uint16(0); y < uint16(maxY); y++ {
-			if matrix[x][y] {
-				result.SetColorIndex(int(x), int(y), 1)
-			}
-		}
-	}
-	return result
-}
-
-func ResizeImage(img image.Image) (image.Image, error) {
+// Resizes the image to the default 1920x1080. Uses [ResizeImageTo].
+func ResizeImage(img image.Image) image.Image {
 	const MAX_HEIGHT = 1080
-	const MAX_WIDTH = 2000
+	const MAX_WIDTH = 1920
 
+	return ResizeImageTo(img, MAX_WIDTH, MAX_HEIGHT)
+}
+
+// Constrains the image to the given dimensions, preserving aspect ratio.
+// If either dimension is set to 0 or less, it will be ignored (effectively like if you set it to infinity).
+func ResizeImageTo(img image.Image, width, height int) image.Image {
 	bd := img.Bounds()
-	if bd.Dy() > MAX_HEIGHT {
-		scalar := float64(MAX_HEIGHT) / float64(bd.Dy())
-		newWidth := math.Round(float64(bd.Dx()) * scalar)
-		if newWidth > MAX_WIDTH {
-			return nil, ErrImageTooWide
-		}
-		scaledImg := image.NewNRGBA(image.Rect(0, 0, int(newWidth), MAX_HEIGHT))
-		draw.NearestNeighbor.Scale(scaledImg, scaledImg.Rect, img, img.Bounds(), draw.Over, nil)
-		return scaledImg, nil
-	} else if bd.Dx() > MAX_WIDTH {
-		return nil, ErrImageTooWide
+	if (width <= 0 && height <= 0) || (width <= bd.Dx() && height <= bd.Dy()) {
+		width, height = bd.Dx(), bd.Dy()
+	} else if width <= 0 {
+		wScalar := float64(height) / float64(bd.Dy())
+		width = int(math.Round(float64(bd.Dx()) * wScalar))
+	} else if height <= 0 {
+		hScalar := float64(width) / float64(bd.Dx())
+		height = int(math.Round(float64(bd.Dx()) * hScalar))
+	} else {
+		wScalar := float64(height) / float64(bd.Dy())
+		hScalar := float64(width) / float64(bd.Dx())
+		scalar := math.Min(wScalar, hScalar)
+		width = int(math.Round(float64(bd.Dx()) * scalar))
+		height = int(math.Round(float64(bd.Dx()) * scalar))
 	}
-	return img, nil
+
+	scaledImg := image.NewNRGBA(image.Rect(0, 0, width, height))
+	draw.NearestNeighbor.Scale(scaledImg, scaledImg.Rect, img, img.Bounds(), draw.Over, nil)
+	return scaledImg
 }
 
 func SimplifyImage(img image.Image, options RegionMapOptions) (result image.Image) {
@@ -342,46 +301,4 @@ func SimplifyImage(img image.Image, options RegionMapOptions) (result image.Imag
 	}
 
 	return newImg
-}
-
-func forNonDiagonalAdjacents(x, y uint16, maxX, maxY int, function func(x, y uint16)) {
-	if y > 0 {
-		function(x, y-1)
-	}
-	if x > 0 {
-		function(x-1, y)
-	}
-	if x < uint16(maxX)-1 {
-		function(x+1, y)
-	}
-	if y < uint16(maxY)-1 {
-		function(x, y+1)
-	}
-}
-
-func forAdjacents(x, y uint16, maxX, maxY int, function func(x, y uint16)) {
-	if y > 0 {
-		if x > 0 {
-			function(x-1, y-1)
-		}
-		function(x, y-1)
-		if x < uint16(maxX)-1 {
-			function(x+1, y-1)
-		}
-	}
-	if x > 0 {
-		function(x-1, y)
-	}
-	if x < uint16(maxX)-1 {
-		function(x+1, y)
-	}
-	if y < uint16(maxY)-1 {
-		if x > 0 {
-			function(x-1, y+1)
-		}
-		function(x, y+1)
-		if x < uint16(maxX)-1 {
-			function(x+1, y+1)
-		}
-	}
 }

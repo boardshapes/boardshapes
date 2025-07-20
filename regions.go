@@ -6,6 +6,16 @@ import (
 	"slices"
 )
 
+var Red color.NRGBA = color.NRGBA{uint8(255), uint8(0), uint8(0), uint8(255)}
+var Green color.NRGBA = color.NRGBA{uint8(0), uint8(255), uint8(0), uint8(255)}
+var Blue color.NRGBA = color.NRGBA{uint8(0), uint8(0), uint8(255), uint8(255)}
+var White color.NRGBA = color.NRGBA{uint8(255), uint8(255), uint8(255), uint8(255)}
+var Black color.NRGBA = color.NRGBA{uint8(0), uint8(0), uint8(0), uint8(255)}
+var Blank color.NRGBA = color.NRGBA{uint8(0), uint8(0), uint8(0), uint8(0)}
+var Cyan color.NRGBA = color.NRGBA{uint8(0), uint8(255), uint8(255), uint8(255)}
+var Magenta color.NRGBA = color.NRGBA{uint8(255), uint8(0), uint8(255), uint8(255)}
+var Yellow color.NRGBA = color.NRGBA{uint8(255), uint8(255), uint8(0), uint8(255)}
+
 func BuildRegionMap(img image.Image, options RegionMapOptions, regionFilter func(*Region) bool) *RegionMap {
 	dx, dy := img.Bounds().Dx(), img.Bounds().Dy()
 	regionMap := RegionMap{make([]*Region, 0, 20), make([][]*Region, dy), options}
