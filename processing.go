@@ -12,7 +12,7 @@ import (
 	"golang.org/x/image/draw"
 )
 
-const version = "0.1.0"
+const VERSION = "0.1.0"
 
 func GetNRGBA(c color.Color) color.NRGBA {
 	var r, g, b, a uint32
@@ -259,7 +259,7 @@ func ResizeImageTo(img image.Image, width, height int) image.Image {
 	return scaledImg
 }
 
-func SimplifyImage(img image.Image, options RegionMapOptions) (result image.Image) {
+func SimplifyImage(img image.Image, options ShapeCreationOptions) (result image.Image) {
 	bd := img.Bounds()
 	var newImg *image.Paletted
 	if options.AllowWhite {
@@ -301,4 +301,124 @@ func SimplifyImage(img image.Image, options RegionMapOptions) (result image.Imag
 	}
 
 	return newImg
+}
+
+type BoardshapesData struct {
+	Version string
+	Shapes  []ShapeData
+}
+
+type ShapeData struct {
+	ShapeNumber    int
+	ShapeColor     color.Color
+	ShapeColorName string
+	CornerX        int
+	CornerY        int
+	ShapeImage     image.Image
+	Shape          []Vertex // maybe this shouldn't be 16 bit uints in the future
+}
+
+type ShapeCreationOptions struct {
+	NoColorSeparation, AllowWhite, PreserveColor bool
+}
+
+func CreateShapes(img image.Image, opts ShapeCreationOptions) (data *BoardshapesData) {
+	data = &BoardshapesData{
+		Version: VERSION,
+	}
+
+	img = ResizeImage(img)
+
+	newImg := SimplifyImage(img, opts)
+
+	regionMap := buildRegionMapWithoutSmallRegions(newImg, opts)
+
+	regions := regionMap.GetRegions()
+	numRegions := len(regions)
+
+	data.Shapes = make([]ShapeData, numRegions)
+
+	for i := range numRegions {
+		region := regionMap.GetRegionByIndex(i)
+
+		minX, minY := FindRegionPosition(region)
+		regionColor := GetColorOfRegion(region, newImg, opts.NoColorSeparation)
+		var regionColorName string
+
+		switch regionColor {
+		case Red:
+			regionColorName = "Red"
+		case Green:
+			regionColorName = "Green"
+		case Blue:
+			regionColorName = "Blue"
+		case Black:
+			regionColorName = "Black"
+		case White:
+			regionColorName = "White"
+		}
+
+		regionImage := image.NewNRGBA(region.GetBounds())
+
+		if opts.PreserveColor {
+			for j := 0; j < len(*region); j++ {
+				regionImage.Set(int((*region)[j].X), int((*region)[j].Y), img.At(int((*region)[j].X), int((*region)[j].Y)))
+			}
+		} else {
+			for j := 0; j < len(*region); j++ {
+				regionImage.Set(int((*region)[j].X), int((*region)[j].Y), regionColor)
+			}
+		}
+
+		shape, err := region.CreateShape()
+		if err != nil {
+			continue
+		}
+		optimizedShape := StraightOpt(shape)
+
+		shapeData := ShapeData{
+			ShapeNumber:    i,
+			ShapeColor:     regionColor,
+			ShapeColorName: regionColorName,
+			CornerX:        minX,
+			CornerY:        minY,
+			ShapeImage:     regionImage,
+			Shape:          optimizedShape,
+		}
+
+		data.Shapes = append(data.Shapes, shapeData)
+	}
+
+	return
+}
+
+type SettableImage = interface {
+	image.Image
+	Set(x, y int, color color.Color)
+}
+
+const MINIMUM_NUMBER_OF_PIXELS_FOR_NON_SMALL_REGION = 50
+
+// this is awful
+func buildRegionMapWithoutSmallRegions(img image.Image, options ShapeCreationOptions) (regionMap *RegionMap) {
+	var removedColor color.Color
+	if options.AllowWhite {
+		removedColor = Blank
+	} else {
+		removedColor = White
+	}
+
+	regionMap = BuildRegionMap(img, options, func(r *Region) bool {
+		if len(*r) >= MINIMUM_NUMBER_OF_PIXELS_FOR_NON_SMALL_REGION {
+			return true
+		}
+		if i, ok := img.(SettableImage); ok {
+			for _, pixel := range *r {
+				i.Set(int(pixel.X), int(pixel.Y), removedColor)
+			}
+		}
+		return false
+	})
+
+	return regionMap
 }

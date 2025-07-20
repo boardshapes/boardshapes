@@ -16,7 +16,7 @@ var Cyan color.NRGBA = color.NRGBA{uint8(0), uint8(255), uint8(255), uint8(255)}
 var Magenta color.NRGBA = color.NRGBA{uint8(255), uint8(0), uint8(255), uint8(255)}
 var Yellow color.NRGBA = color.NRGBA{uint8(255), uint8(255), uint8(0), uint8(255)}
 
-func BuildRegionMap(img image.Image, options RegionMapOptions, regionFilter func(*Region) bool) *RegionMap {
+func BuildRegionMap(img image.Image, options ShapeCreationOptions, regionFilter func(*Region) bool) *RegionMap {
 	dx, dy := img.Bounds().Dx(), img.Bounds().Dy()
 	regionMap := RegionMap{make([]*Region, 0, 20), make([][]*Region, dy), options}
 	for i := range regionMap.pixels {
@@ -63,11 +63,7 @@ type Region []Pixel
 type RegionMap struct {
 	regions []*Region
 	pixels  [][]*Region
-	options RegionMapOptions
-}
-
-type RegionMapOptions struct {
-	NoColorSeparation, AllowWhite bool
+	options ShapeCreationOptions
 }
 
 func (rm *RegionMap) NewRegion(pixel Pixel) (region *Region) {

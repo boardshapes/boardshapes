@@ -35,7 +35,7 @@ func loadImage(path string) image.Image {
 
 type regionTestArgs struct {
 	img          image.Image
-	options      RegionMapOptions
+	options      ShapeCreationOptions
 	regionFilter func(*Region) bool
 }
 
