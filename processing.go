@@ -336,7 +336,7 @@ func CreateShapes(img image.Image, opts ShapeCreationOptions) (data *Boardshapes
 	regions := regionMap.GetRegions()
 	numRegions := len(regions)
 
-	data.Shapes = make([]ShapeData, numRegions)
+	data.Shapes = make([]ShapeData, 0, numRegions)
 
 	for i := range numRegions {
 		region := regionMap.GetRegionByIndex(i)
