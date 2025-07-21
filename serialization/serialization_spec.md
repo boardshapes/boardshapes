@@ -20,6 +20,8 @@ The version of the Boardshapes package used to generate this data.
 
 This chunk should not appear more than once. **It is very inadvisable to not have this chunk,** as it may make the data impossible to deserialize (with the latest package version) in the future.
 
+If this is not the very first chunk in the data, it may make the data impossible to deserialize with backwards-compatible deserializers, meaning you will have to use a deserializer for that specific version of the data.
+
 #### Structure
 
 Should always be in [semver](https://semver.org/) format as a null-terminated UTF-8 string.
@@ -57,13 +59,13 @@ Represents a shape's position followed by its vertices/path.
 
 #### Structure
 
-The value of the first 4 bytes in the chunk is the shape's unique number as a 32-bit unsigned integer.
+The value of the first 4 bytes in the chunk is the shape's unique number as a big-endian 32-bit unsigned integer.
 
-The next 8 bytes are the X and Y positions of the shape's top-left corner in the source image, both of them as 32-bit integers.
+The next 8 bytes are the X and Y positions of the shape's top-left corner in the source image, both of them as big-endian 32-bit integers.
 
-The next 4 bytes are the number of vertices in the shape as a 32-bit unsigned integer.
+The next 4 bytes are the number of vertices in the shape as a big-endian 32-bit unsigned integer.
 
-The remaining `(number of vertices) * 8` bytes are the X and Y positions of each vertex in the shape, both of them as 32-bit integers.
+The remaining `(number of vertices) * 8` bytes are the X and Y positions of each vertex in the shape, both of them as big-endian 32-bit integers.
 
 [Insert Diagram Here?]
 
@@ -77,7 +79,7 @@ It is recommended to have this color match one in the color table.
 
 #### Structure
 
-The value of the first 4 bytes in the chunk is the shape's unique number as a 32-bit unsigned integer.
+The value of the first 4 bytes in the chunk is the shape's unique number as a big-endian 32-bit unsigned integer.
 
 The color is represented by a 32-bit RGBA color.
 
@@ -91,9 +93,9 @@ It is not recommended to use this chunk type while also using "[11] Shape Mask".
 
 #### Structure
 
-The value of the first 4 bytes in the chunk is the shape's unique number as a 32-bit unsigned integer.
+The value of the first 4 bytes in the chunk is the shape's unique number as a big-endian 32-bit unsigned integer.
 
-The next 4 bytes are the PNG image's size as a 32-bit unsigned integer.
+The next 4 bytes are the PNG image's size as a big-endian 32-bit unsigned integer.
 
 The rest of the data in the chunk is the shape's image in PNG format.
 

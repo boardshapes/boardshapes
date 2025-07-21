@@ -309,13 +309,13 @@ type BoardshapesData struct {
 }
 
 type ShapeData struct {
-	ShapeNumber    int
-	ShapeColor     color.Color
-	ShapeColorName string
-	CornerX        int
-	CornerY        int
-	ShapeImage     image.Image
-	Shape          []Vertex // maybe this shouldn't be 16 bit uints in the future
+	Number    int
+	Color     color.Color
+	ColorName string
+	CornerX   int
+	CornerY   int
+	Image     image.Image
+	Path      []Vertex // maybe this shouldn't be 16 bit uints in the future
 }
 
 type ShapeCreationOptions struct {
@@ -377,13 +377,13 @@ func CreateShapes(img image.Image, opts ShapeCreationOptions) (data *Boardshapes
 		optimizedShape := StraightOpt(shape)
 
 		shapeData := ShapeData{
-			ShapeNumber:    i,
-			ShapeColor:     regionColor,
-			ShapeColorName: regionColorName,
-			CornerX:        minX,
-			CornerY:        minY,
-			ShapeImage:     regionImage,
-			Shape:          optimizedShape,
+			Number:    i,
+			Color:     regionColor,
+			ColorName: regionColorName,
+			CornerX:   minX,
+			CornerY:   minY,
+			Image:     regionImage,
+			Path:      optimizedShape,
 		}
 
 		data.Shapes = append(data.Shapes, shapeData)
