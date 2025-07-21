@@ -59,6 +59,7 @@ func BinarySerialize(w io.Writer, data main.BoardshapesData) error {
 
 	// write color table chunk
 	chunk = []byte{CHUNK_COLOR_TABLE}
+	chunk = append(chunk, byte(len(colors)))
 
 	for color, name := range colors {
 		nrgba := main.GetNRGBA(color)
