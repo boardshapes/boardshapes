@@ -109,7 +109,16 @@ It is not recommended to use this chunk type while also using "[10] Shape Image"
 
 #### Structure
 
-WIP
+The value of the first 4 bytes in the chunk is the shape's unique number as a big-endian 32-bit unsigned integer.
+
+The next 2 bytes are the width of the mask as a big-endian 16-bit unsigned integer.
+
+The next byte is a boolean value determining if the mask starts from the top-left filled or empty.
+
+The next 4 bytes are the number of variable-length unsigned integers making up the mask as a big-endian 32-bit integer.
+
+The rest of the data are variable-length integers representing a number of pixels that are either filled or empty.
+Please make this make sense later ^^^
 
 ---
 

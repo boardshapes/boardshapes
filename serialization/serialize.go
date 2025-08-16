@@ -39,7 +39,19 @@ var deserializers = map[string]DeserializeFunc{
 	"0.1": v0_1.BinaryDeserialize,
 }
 
-func BinarySerialize(w io.Writer, data main.BoardshapesData) error {
+type SerializationOptions struct {
+	UseMasks bool
+}
+
+var DefaultOptions = SerializationOptions{
+	UseMasks: true,
+}
+
+func BinarySerialize(w io.Writer, data main.BoardshapesData, options *SerializationOptions) error {
+	if options == nil {
+		options = &DefaultOptions
+	}
+
 	var buf bytes.Buffer
 
 	// write version chunk
