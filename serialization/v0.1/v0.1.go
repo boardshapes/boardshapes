@@ -5,6 +5,7 @@ import (
 	"boardshapes/boardshapes/serialization/shared"
 	"bytes"
 	"encoding/binary"
+	"image"
 	"image/color"
 	"image/png"
 	"io"
@@ -122,7 +123,50 @@ func BinaryDeserialize(r io.Reader) (*main.BoardshapesData, error) {
 				}
 				shape.Image = img
 			case CHUNK_SHAPE_MASK:
-				// WIP
+				width := new(uint16)
+				binary.Read(&buf, binary.BigEndian, width)
+				startsFilled, err := buf.ReadByte()
+				if err != nil {
+					return nil, err
+				}
+
+				filled := startsFilled > 0
+				b, err := buf.ReadBytes(0x00)
+				if err != nil {
+					return nil, err
+				}
+
+				runLengths := make([]uint, 0)
+				for len(b) > 0 {
+					runLength, nBytes := binary.Uvarint(b)
+					runLengths = append(runLengths, uint(runLength))
+					b = b[nBytes:]
+				}
+
+				sum := uint(0)
+				for _, rl := range runLengths {
+					sum += rl
+				}
+
+				if sum%uint(*width) != 0 {
+					// um eror
+					panic("mask width does not divide evenly into total number of pixels in mask")
+				}
+
+				height := sum / uint(*width)
+				img := image.NewNRGBA(image.Rect(0, 0, int(*width), int(height)))
+				i := 0
+				for _, rl := range runLengths {
+					for range rl {
+						if filled {
+							img.Set(i%int(*width), i/int(height), main.Black)
+						} else {
+							img.Set(i%int(*width), i/int(height), main.Blank)
+						}
+						i++
+					}
+				}
+				shape.Image = img
 			}
 
 			shapes[int(*shapeNumber)] = shape
