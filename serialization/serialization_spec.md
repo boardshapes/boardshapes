@@ -115,9 +115,7 @@ The next 2 bytes are the width of the mask as a big-endian 16-bit unsigned integ
 
 The next byte is a boolean value determining if the mask starts from the top-left filled or empty.
 
-The next 4 bytes are the number of variable-length unsigned integers making up the mask as a big-endian 32-bit integer.
-
-The rest of the data are variable-length integers representing a number of pixels that are either filled or empty.
+The rest of the data are variable-length integers representing a number of pixels that are either filled or empty, terminated by a null byte.
 Please make this make sense later ^^^
 
 ---

@@ -105,14 +105,55 @@ func BinarySerialize(w io.Writer, data main.BoardshapesData, options *Serializat
 		chunk = binary.BigEndian.AppendUint32(chunk, uint32(shape.Number))
 		chunk = append(chunk, nrgba.R, nrgba.G, nrgba.B, nrgba.A)
 
-		// shape image chunk
-		chunk = append(chunk, CHUNK_SHAPE_IMAGE)
+		if shape.Image != nil && shape.Image.Bounds().Dx() > 0 && shape.Image.Bounds().Dy() > 0 {
+			if options.UseMasks {
+				// shape mask chunk
+				chunk = append(chunk, CHUNK_SHAPE_MASK)
+				chunk = binary.BigEndian.AppendUint32(chunk, uint32(shape.Number))
 
-		var pngBuf bytes.Buffer
-		png.Encode(&pngBuf, shape.Image)
+				img := shape.Image
+				bds := img.Bounds()
 
-		chunk = binary.BigEndian.AppendUint32(chunk, uint32(pngBuf.Len()))
-		chunk = append(chunk, pngBuf.Bytes()...)
+				chunk = binary.BigEndian.AppendUint16(chunk, uint16(bds.Dx()))
+
+				_, _, _, a := img.At(bds.Min.X, bds.Min.Y).RGBA()
+				prevFilled := a > 0
+				if prevFilled {
+					chunk = append(chunk, 1)
+				} else {
+					chunk = append(chunk, 0)
+				}
+
+				runLength := 0
+
+				for y := bds.Min.Y; y < bds.Max.Y; y++ {
+					for x := bds.Min.X; x < bds.Max.X; x++ {
+						_, _, _, a := img.At(x, y).RGBA()
+						filled := a > 0
+						if prevFilled == filled {
+							runLength++
+						} else {
+							chunk = binary.AppendUvarint(chunk, uint64(runLength))
+							runLength = 1
+							prevFilled = filled
+						}
+					}
+				}
+
+				chunk = binary.AppendUvarint(chunk, uint64(runLength))
+				chunk = append(chunk, 0)
+			} else {
+				// shape image chunk
+				chunk = append(chunk, CHUNK_SHAPE_IMAGE)
+				chunk = binary.BigEndian.AppendUint32(chunk, uint32(shape.Number))
+
+				var pngBuf bytes.Buffer
+				png.Encode(&pngBuf, shape.Image)
+
+				chunk = binary.BigEndian.AppendUint32(chunk, uint32(pngBuf.Len()))
+				chunk = append(chunk, pngBuf.Bytes()...)
+			}
+		}
 
 		_, err = buf.Write(chunk)
 		if err != nil {
