@@ -5,6 +5,7 @@ import (
 	"boardshapes/boardshapes/serialization/shared"
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"image"
 	"image/color"
 	"image/png"
@@ -20,8 +21,12 @@ const (
 	CHUNK_SHAPE_MASK     = 11
 )
 
-func BinaryDeserialize(r io.Reader) (*main.BoardshapesData, error) {
+func BinaryDeserialize(r io.Reader, options map[string]any) (*main.BoardshapesData, error) {
 	data := &main.BoardshapesData{}
+	var baseImage image.Image
+	if img, ok := options["baseImage"].(image.Image); ok {
+		baseImage = img
+	}
 
 	buf := bytes.Buffer{}
 	_, err := buf.ReadFrom(r)
@@ -31,6 +36,7 @@ func BinaryDeserialize(r io.Reader) (*main.BoardshapesData, error) {
 
 	colors := make(map[color.NRGBA]string, 0)
 	shapes := make(map[int]main.ShapeData, 0)
+	shapesUsingMasks := make([]int, 0)
 	for {
 		chunkId, err := buf.ReadByte()
 		if err == io.EOF {
@@ -123,6 +129,7 @@ func BinaryDeserialize(r io.Reader) (*main.BoardshapesData, error) {
 				}
 				shape.Image = img
 			case CHUNK_SHAPE_MASK:
+				shapesUsingMasks = append(shapesUsingMasks, shape.Number)
 				width := new(uint16)
 				binary.Read(&buf, binary.BigEndian, width)
 				startsFilled, err := buf.ReadByte()
@@ -149,8 +156,7 @@ func BinaryDeserialize(r io.Reader) (*main.BoardshapesData, error) {
 				}
 
 				if sum%uint(*width) != 0 {
-					// um eror
-					panic("mask width does not divide evenly into total number of pixels in mask")
+					return nil, errors.New("deserialization: mask width does not divide evenly into total number of pixels in mask")
 				}
 
 				height := sum / uint(*width)
@@ -174,7 +180,42 @@ func BinaryDeserialize(r io.Reader) (*main.BoardshapesData, error) {
 			return nil, shared.ErrUnknownChunkType(chunkId)
 		}
 	}
-	// add color names to shapes
 
+	// add color names to shapes
+	for i, shape := range shapes {
+		if shape.Color != nil {
+			colorName, ok := colors[shape.Color.(color.NRGBA)]
+			if ok {
+				shape.ColorName = colorName
+				shapes[i] = shape
+			}
+		}
+	}
+
+	var getPixelColor func(x, y int, shape main.ShapeData) color.Color
+	if baseImage != nil {
+		getPixelColor = func(x, y int, shape main.ShapeData) color.Color {
+			return baseImage.At(shape.CornerX+x, shape.CornerY+y)
+		}
+	} else {
+		getPixelColor = func(x, y int, shape main.ShapeData) color.Color {
+			return shape.Color
+		}
+	}
+
+	// restore color to shapes using masks
+	for _, shapeNumber := range shapesUsingMasks {
+		shape := shapes[shapeNumber]
+		img, ok := shape.Image.(shared.SettableImage)
+		if ok {
+			for y := 0; y < img.Bounds().Dy(); y++ {
+				for x := 0; x < img.Bounds().Dx(); x++ {
+					if _, _, _, a := img.At(x, y).RGBA(); a > 0 {
+						img.Set(x, y, getPixelColor(x, y, shape))
+					}
+				}
+			}
+		}
+	}
 	return data, nil
 }

@@ -22,7 +22,7 @@ const (
 	CHUNK_SHAPE_MASK     = 11
 )
 
-type DeserializeFunc func(r io.Reader) (*main.BoardshapesData, error)
+type DeserializeFunc func(r io.Reader, options map[string]any) (*main.BoardshapesData, error)
 
 // the byte is the chunk ID
 type ErrUnknownChunkType byte
@@ -166,7 +166,7 @@ func BinarySerialize(w io.Writer, data main.BoardshapesData, options *Serializat
 	return err
 }
 
-func BinaryDeserialize(r io.Reader) (*main.BoardshapesData, error) {
+func BinaryDeserialize(r io.Reader, options map[string]any) (*main.BoardshapesData, error) {
 	var buf bytes.Buffer
 	_, err := buf.ReadFrom(r)
 	if err != nil {
@@ -193,5 +193,5 @@ func BinaryDeserialize(r io.Reader) (*main.BoardshapesData, error) {
 		return nil, ErrIncompatibleVersion
 	}
 
-	return deserializeFunc(&buf)
+	return deserializeFunc(&buf, options)
 }
