@@ -198,7 +198,7 @@ func BinaryDeserialize(r io.Reader, options map[string]any) (*main.BoardshapesDa
 			return baseImage.At(shape.CornerX+x, shape.CornerY+y)
 		}
 	} else {
-		getPixelColor = func(x, y int, shape main.ShapeData) color.Color {
+		getPixelColor = func(_, _ int, shape main.ShapeData) color.Color {
 			return shape.Color
 		}
 	}
@@ -217,5 +217,11 @@ func BinaryDeserialize(r io.Reader, options map[string]any) (*main.BoardshapesDa
 			}
 		}
 	}
+
+	data.Shapes = make([]main.ShapeData, 0, len(shapes))
+	for _, shape := range shapes {
+		data.Shapes = append(data.Shapes, shape)
+	}
+
 	return data, nil
 }

@@ -2,7 +2,6 @@ package serialization
 
 import (
 	main "boardshapes/boardshapes"
-	"boardshapes/boardshapes/serialization/shared"
 	v0_1 "boardshapes/boardshapes/serialization/v0.1"
 	"bytes"
 	"encoding/binary"
@@ -71,7 +70,7 @@ func BinarySerialize(w io.Writer, data main.BoardshapesData, options *Serializat
 
 	// write color table chunk
 	chunk = []byte{CHUNK_COLOR_TABLE}
-	chunk = append(chunk, byte(len(colors)))
+	chunk = binary.BigEndian.AppendUint32(chunk, uint32(len(colors)))
 
 	for color, name := range colors {
 		nrgba := main.GetNRGBA(color)
@@ -173,15 +172,16 @@ func BinaryDeserialize(r io.Reader, options map[string]any) (*main.BoardshapesDa
 		return nil, err
 	}
 
-	if buf.Bytes()[0] != 0 {
+	bufBytes := buf.Bytes()
+	if bufBytes[0] != 0 {
 		return nil, ErrVersionNotFound
 	}
 
-	version, err := buf.ReadString(0)
-	if err != nil {
-		return nil, err
+	nullIndex := bytes.IndexByte(bufBytes[1:], 0)
+	if nullIndex == -1 {
+		return nil, ErrVersionNotFound
 	}
-	version = shared.TrimNullByte(version)
+	version := string(bufBytes[1 : nullIndex+1])
 
 	vnums := strings.Split(version, ".")
 	if len(vnums) < 2 {
