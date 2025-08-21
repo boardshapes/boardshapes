@@ -71,20 +71,52 @@ func TestBinarySerialization(t *testing.T) {
 			}
 			t.Logf("deserialized shapes: %d", len(result.Shapes))
 
-			if data.Version != result.Version {
-				t.Errorf("Version mismatch: got %v, want %v", result.Version, data.Version)
+			if equal, reason := data.Equal(*result); !equal {
+				t.Errorf("Data mismatch: %v", reason)
+			}
+		})
+	}
+}
+
+func TestJsonSerialization(t *testing.T) {
+	type args struct {
+		data    main.BoardshapesData
+		options *SerializationOptions
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+		{
+			name: "lub",
+			args: args{
+				data: *main.CreateShapes(
+					loadImage("../test_images/lub.png"),
+					main.ShapeCreationOptions{}),
+				options: &SerializationOptions{
+					UseMasks: false,
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data := tt.args.data
+			b, err := JsonSerialize(&data)
+			if err != nil {
+				t.Errorf("JsonSerialize() error = %v", err)
 				return
 			}
+			t.Logf("serialized shapes: %d", len(data.Shapes))
 
-		outer:
-			for _, outShape := range result.Shapes {
-				for _, inShape := range data.Shapes {
-					if inShape.Equal(outShape) {
-						continue outer
-					}
-				}
-				t.Errorf("Shape has no matching shape: %d", outShape.Number)
-				return
+			result, err := JsonDeserialize(b)
+			if err != nil {
+				t.Errorf("JsonDeserialize() error = %v", err)
+			}
+			t.Logf("deserialized shapes: %d", len(result.Shapes))
+
+			if equal, reason := data.Equal(*result); !equal {
+				t.Errorf("Data mismatch: %v", reason)
 			}
 		})
 	}
