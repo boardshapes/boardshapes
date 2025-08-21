@@ -33,13 +33,24 @@ func TestBinarySerialization(t *testing.T) {
 		args args
 	}{
 		{
-			name: "lub",
+			name: "no-masks",
 			args: args{
 				data: *main.CreateShapes(
-					loadImage("../build_region_map_test_images/lub.png"),
+					loadImage("../test_images/lub.png"),
 					main.ShapeCreationOptions{}),
 				options: &SerializationOptions{
 					UseMasks: false,
+				},
+			},
+		},
+		{
+			name: "masks",
+			args: args{
+				data: *main.CreateShapes(
+					loadImage("../test_images/lub.png"),
+					main.ShapeCreationOptions{}),
+				options: &SerializationOptions{
+					UseMasks: true,
 				},
 			},
 		},
@@ -66,8 +77,8 @@ func TestBinarySerialization(t *testing.T) {
 			}
 
 		outer:
-			for _, outShape := range data.Shapes {
-				for _, inShape := range result.Shapes {
+			for _, outShape := range result.Shapes {
+				for _, inShape := range data.Shapes {
 					if inShape.Equal(outShape) {
 						continue outer
 					}

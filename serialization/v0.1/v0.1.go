@@ -165,12 +165,13 @@ func BinaryDeserialize(r io.Reader, options map[string]any) (*main.BoardshapesDa
 				for _, rl := range runLengths {
 					for range rl {
 						if filled {
-							img.Set(i%int(*width), i/int(height), main.Black)
+							img.Set(i%int(*width), i/int(*width), main.Black)
 						} else {
-							img.Set(i%int(*width), i/int(height), main.Blank)
+							img.Set(i%int(*width), i/int(*width), main.Blank)
 						}
 						i++
 					}
+					filled = !filled
 				}
 				shape.Image = img
 			}
