@@ -61,11 +61,11 @@ Represents a shape's position followed by its vertices/path.
 
 The value of the first 4 bytes in the chunk is the shape's unique number as a big-endian 32-bit unsigned integer.
 
-The next 8 bytes are the X and Y positions of the shape's top-left corner in the source image, both of them as big-endian 32-bit integers.
+The next 8 bytes are the X and Y positions of the shape's top-left corner in the source image, both of them as unsigned big-endian 16-bit integers.
 
 The next 4 bytes are the number of vertices in the shape as a big-endian 32-bit unsigned integer.
 
-The remaining `(number of vertices) * 8` bytes are the X and Y positions of each vertex in the shape, both of them as big-endian 32-bit integers.
+The remaining `(number of vertices) * 4` bytes are the X and Y positions of each vertex in the shape, both of them as unsigned big-endian 16-bit integers.
 
 [Insert Diagram Here?]
 

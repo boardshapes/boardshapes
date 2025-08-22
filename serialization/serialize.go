@@ -92,13 +92,13 @@ func BinarySerialize(w io.Writer, data main.BoardshapesData, options *Serializat
 		chunk := []byte{CHUNK_SHAPE_GEOMETRY}
 
 		chunk = binary.BigEndian.AppendUint32(chunk, uint32(shape.Number))
-		chunk = binary.BigEndian.AppendUint32(chunk, uint32(shape.CornerX))
-		chunk = binary.BigEndian.AppendUint32(chunk, uint32(shape.CornerY))
+		chunk = binary.BigEndian.AppendUint16(chunk, uint16(shape.CornerX))
+		chunk = binary.BigEndian.AppendUint16(chunk, uint16(shape.CornerY))
 		chunk = binary.BigEndian.AppendUint32(chunk, uint32(len(shape.Path)))
 
 		for _, vert := range shape.Path {
-			chunk = binary.BigEndian.AppendUint32(chunk, uint32(vert.X))
-			chunk = binary.BigEndian.AppendUint32(chunk, uint32(vert.Y))
+			chunk = binary.BigEndian.AppendUint16(chunk, uint16(vert.X))
+			chunk = binary.BigEndian.AppendUint16(chunk, uint16(vert.Y))
 		}
 
 		// shape color chunk

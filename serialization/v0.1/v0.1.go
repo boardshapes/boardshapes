@@ -84,24 +84,24 @@ func BinaryDeserialize(r io.Reader, options map[string]any) (*main.BoardshapesDa
 
 			switch chunkId {
 			case CHUNK_SHAPE_GEOMETRY:
-				d := make([]byte, 12)
+				d := make([]byte, 8)
 				_, err := buf.Read(d)
 				if err != nil {
 					return nil, err
 				}
 
-				cornerX, cornerY, nVertices := binary.BigEndian.Uint32(d[0:4]), binary.BigEndian.Uint32(d[4:8]), binary.BigEndian.Uint32(d[8:12])
+				cornerX, cornerY, nVertices := binary.BigEndian.Uint16(d[0:2]), binary.BigEndian.Uint16(d[2:4]), binary.BigEndian.Uint32(d[4:8])
 				shape.CornerX = int(cornerX)
 				shape.CornerY = int(cornerY)
 
 				path := make([]main.Vertex, nVertices)
 				for i := range nVertices {
-					bv := make([]byte, 8)
+					bv := make([]byte, 4)
 					_, err := buf.Read(bv)
 					if err != nil {
 						return nil, err
 					}
-					x, y := binary.BigEndian.Uint32(bv[0:4]), binary.BigEndian.Uint32(bv[4:8])
+					x, y := binary.BigEndian.Uint16(bv[0:2]), binary.BigEndian.Uint16(bv[2:4])
 					path[i] = main.Vertex{X: uint16(x), Y: uint16(y)}
 				}
 

@@ -336,7 +336,7 @@ type ShapeData struct {
 	CornerX   int
 	CornerY   int
 	Image     image.Image
-	Path      []Vertex // maybe this shouldn't be 16 bit uints in the future
+	Path      []Vertex
 }
 
 func (sd ShapeData) Equal(other ShapeData) bool {
