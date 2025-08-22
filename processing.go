@@ -240,7 +240,7 @@ func ResizeImage(img image.Image) image.Image {
 // If either dimension is set to 0 or less, it will be ignored (effectively like if you set it to infinity).
 func ResizeImageTo(img image.Image, width, height int) image.Image {
 	bd := img.Bounds()
-	if (width <= 0 && height <= 0) || (width <= bd.Dx() && height <= bd.Dy()) {
+	if (width <= 0 && height <= 0) || (width >= bd.Dx() && height >= bd.Dy()) {
 		width, height = bd.Dx(), bd.Dy()
 	} else if width <= 0 {
 		wScalar := float64(height) / float64(bd.Dy())
@@ -253,7 +253,7 @@ func ResizeImageTo(img image.Image, width, height int) image.Image {
 		hScalar := float64(width) / float64(bd.Dx())
 		scalar := math.Min(wScalar, hScalar)
 		width = int(math.Round(float64(bd.Dx()) * scalar))
-		height = int(math.Round(float64(bd.Dx()) * scalar))
+		height = int(math.Round(float64(bd.Dy()) * scalar))
 	}
 
 	scaledImg := image.NewNRGBA(image.Rect(0, 0, width, height))
