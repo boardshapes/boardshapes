@@ -25,12 +25,13 @@ func BuildRegionMap(img image.Image, options ShapeCreationOptions, regionFilter 
 
 	bd := img.Bounds()
 
+	allowWhite := regionMap.options.AllowWhite
 	for y := bd.Min.Y; y < bd.Max.Y; y++ {
 		for x := bd.Min.X; x < bd.Max.X; x++ {
 			pixel := Pixel{uint16(x), uint16(y)}
 			if !regionMap.GetPixelHasRegion(pixel) {
 				c := img.At(x, y)
-				if c != Blank && (regionMap.options.AllowWhite || c != White) {
+				if c != Blank && (allowWhite || c != White) {
 					regionMap.AddPixelToRegionMap(pixel, img)
 				}
 			}
@@ -38,12 +39,7 @@ func BuildRegionMap(img image.Image, options ShapeCreationOptions, regionFilter 
 	}
 
 	if regionFilter != nil {
-		for i, region := range regionMap.regions {
-			if region != nil && !regionFilter(region) {
-				regionMap.regions[i] = nil
-			}
-		}
-		regionMap.regions = slices.DeleteFunc(regionMap.regions, func(r *Region) bool { return r == nil })
+		regionMap.FilterRegions(regionFilter)
 	}
 
 	return &regionMap
@@ -115,6 +111,19 @@ func (rm *RegionMap) GetRegionByIndex(i int) *Region {
 
 func (rm *RegionMap) GetRegions() []*Region {
 	return rm.regions
+}
+
+func (rm *RegionMap) FilterRegions(regionFilter func(*Region) bool) {
+	for i, region := range rm.regions {
+		if region != nil && !regionFilter(region) {
+			rm.regions[i] = nil
+		}
+	}
+	rm.cleanupRegions()
+}
+
+func (rm *RegionMap) cleanupRegions() {
+	rm.regions = slices.DeleteFunc(rm.regions, func(r *Region) bool { return r == nil })
 }
 
 func (re *Region) GetBounds() (regionBounds image.Rectangle) {

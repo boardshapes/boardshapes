@@ -363,7 +363,12 @@ func (sd ShapeData) Equal(other ShapeData) bool {
 }
 
 type ShapeCreationOptions struct {
-	NoColorSeparation, AllowWhite, PreserveColor bool
+	NoColorSeparation, AllowWhite, PreserveColor, KeepSmallRegions bool
+}
+
+func isRegionLargeEnough(region *Region) bool {
+	const MINIMUM_NUMBER_OF_PIXELS_FOR_NON_SMALL_REGION = 50
+	return len(*region) >= MINIMUM_NUMBER_OF_PIXELS_FOR_NON_SMALL_REGION
 }
 
 func CreateShapes(img image.Image, opts ShapeCreationOptions) (data *BoardshapesData) {
@@ -375,7 +380,14 @@ func CreateShapes(img image.Image, opts ShapeCreationOptions) (data *Boardshapes
 
 	newImg := SimplifyImage(img, opts)
 
-	regionMap := buildRegionMapWithoutSmallRegions(newImg, opts)
+	var filter func(*Region) bool
+	if opts.KeepSmallRegions {
+		filter = nil
+	} else {
+		filter = isRegionLargeEnough
+	}
+
+	regionMap := BuildRegionMap(newImg, opts, filter)
 
 	regions := regionMap.GetRegions()
 	numRegions := len(regions)
@@ -439,30 +451,4 @@ func CreateShapes(img image.Image, opts ShapeCreationOptions) (data *Boardshapes
 type SettableImage = interface {
 	image.Image
 	Set(x, y int, color color.Color)
-}
-
-const MINIMUM_NUMBER_OF_PIXELS_FOR_NON_SMALL_REGION = 50
-
-// this is awful
-func buildRegionMapWithoutSmallRegions(img image.Image, options ShapeCreationOptions) (regionMap *RegionMap) {
-	var removedColor color.Color
-	if options.AllowWhite {
-		removedColor = Blank
-	} else {
-		removedColor = White
-	}
-
-	regionMap = BuildRegionMap(img, options, func(r *Region) bool {
-		if len(*r) >= MINIMUM_NUMBER_OF_PIXELS_FOR_NON_SMALL_REGION {
-			return true
-		}
-		if i, ok := img.(SettableImage); ok {
-			for _, pixel := range *r {
-				i.Set(int(pixel.X), int(pixel.Y), removedColor)
-			}
-		}
-		return false
-	})
-
-	return regionMap
 }
