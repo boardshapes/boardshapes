@@ -86,7 +86,41 @@ func (region *Region) CreateShape() (shape []Vertex, err error) {
 	regionBounds := region.GetBounds()
 
 	// will sastisfy my requirements.
-	regionPixels := make([][]RegionPixel, regionBounds.Dx()+2)
+	regionPixels := createRegionPixelsMatrix(region, regionBounds)
+
+	// find inner pixels to find shapes
+	possibleShapeVertices := findShapes(regionPixels)
+
+	if len(possibleShapeVertices) == 0 {
+		return nil, errors.New("region-to-shape: region is too thin")
+	}
+
+	largestShapeVertices := slices.MaxFunc(possibleShapeVertices, func(a, b []Vertex) int {
+		return cmp.Compare(len(a), len(b))
+	})
+
+	vertexMatrix := make([][]bool, regionBounds.Dx())
+	for i := range vertexMatrix {
+		vertexMatrix[i] = make([]bool, regionBounds.Dy())
+	}
+
+	// build matrix with all vertices translated by (-1, -1)
+	// necessary because we added extra space for the region up above
+	for _, v := range largestShapeVertices {
+		vertexMatrix[v.X-1][v.Y-1] = true
+	}
+
+	return findSortedShapeVertices(
+		Vertex{
+			X: largestShapeVertices[0].X - 1,
+			Y: largestShapeVertices[0].Y - 1,
+		},
+		vertexMatrix,
+		len(largestShapeVertices))
+}
+
+func createRegionPixelsMatrix(region *Region, regionBounds image.Rectangle) (regionPixels [][]RegionPixel) {
+	regionPixels = make([][]RegionPixel, regionBounds.Dx()+2)
 	for i := range regionPixels {
 		regionPixels[i] = make([]RegionPixel, regionBounds.Dy()+2)
 	}
@@ -102,36 +136,43 @@ func (region *Region) CreateShape() (shape []Vertex, err error) {
 		verticesToVisit = verticesToVisit[:len(verticesToVisit)-1]
 		if !regionPixels[v.X][v.Y].Visited() {
 			regionPixels[v.X][v.Y].MarkVisited()
-			forNonDiagonalAdjacents(v.X, v.Y, len(regionPixels), len(regionPixels[0]), func(x, y uint16) {
-				if !regionPixels[x][y].Visited() && !regionPixels[x][y].IsOuter() {
-					if regionPixels[x][y].InRegion() {
-						regionPixels[x][y].MarkIsOuter()
-					} else {
-						verticesToVisit = append(verticesToVisit, Vertex{x, y})
+			forNonDiagonalAdjacents(
+				v.X, v.Y, len(regionPixels), len(regionPixels[0]),
+				func(x, y uint16) {
+					if !regionPixels[x][y].Visited() && !regionPixels[x][y].IsOuter() {
+						if regionPixels[x][y].InRegion() {
+							regionPixels[x][y].MarkIsOuter()
+						} else {
+							verticesToVisit = append(verticesToVisit, Vertex{x, y})
+						}
 					}
-				}
-			})
+				})
 
 		}
 	}
+	return regionPixels
+}
 
-	vertexShapes := make([][]Vertex, 0, 1)
-
-	// find inner pixels
+func findShapes(regionPixels [][]RegionPixel) [][]Vertex {
+	possibleShapeVertices := make([][]Vertex, 0, 1)
 	for y := uint16(0); y < uint16(len(regionPixels[0])); y++ {
 		for x := uint16(0); x < uint16(len(regionPixels)); x++ {
 			rp := regionPixels[x][y]
 			// check if inner pixel
 			if !rp.Visited() && !rp.IsOuter() {
 				verticesToVisit := []Vertex{{x, y}}
-				newInnerShape := make([]Vertex, 0, regionBounds.Dx()+regionBounds.Dy())
+				newInnerShape := make([]Vertex, 0)
 				// visit inner pixels
 				for len(verticesToVisit) > 0 {
 					v := verticesToVisit[len(verticesToVisit)-1]
 					verticesToVisit = verticesToVisit[:len(verticesToVisit)-1]
-					if !regionPixels[v.X][v.Y].Visited() {
-						regionPixels[v.X][v.Y].MarkVisited()
-						forNonDiagonalAdjacents(v.X, v.Y, len(regionPixels), len(regionPixels[0]), func(x, y uint16) {
+					if regionPixels[v.X][v.Y].Visited() {
+						continue
+					}
+					regionPixels[v.X][v.Y].MarkVisited()
+					forNonDiagonalAdjacents(
+						v.X, v.Y, len(regionPixels), len(regionPixels[0]),
+						func(x, y uint16) {
 							if !regionPixels[x][y].Visited() && !regionPixels[x][y].IsInner() {
 								if regionPixels[x][y].IsOuter() {
 									regionPixels[x][y].MarkIsInner()
@@ -142,38 +183,19 @@ func (region *Region) CreateShape() (shape []Vertex, err error) {
 							}
 						})
 
-					}
 				}
-				vertexShapes = append(vertexShapes, newInnerShape)
+				possibleShapeVertices = append(possibleShapeVertices, newInnerShape)
 			}
 		}
 	}
+	return possibleShapeVertices
+}
 
-	vertexMatrix := make([][]bool, regionBounds.Dx())
-	for i := range vertexMatrix {
-		vertexMatrix[i] = make([]bool, regionBounds.Dy())
-	}
-
-	if len(vertexShapes) == 0 {
-		return nil, errors.New("region-to-shape: region is too thin")
-	}
-
-	vertexShape := slices.MaxFunc(vertexShapes, func(a, b []Vertex) int {
-		return cmp.Compare(len(a), len(b))
-	})
-
-	// translate all vertices by (-1, -1)
-	// necessary because we added extra space for the region up above
-	for i, v := range vertexShape {
-		vertexShape[i].X--
-		vertexShape[i].Y--
-		vertexMatrix[v.X-1][v.Y-1] = true
-	}
-
+func findSortedShapeVertices(startingVertex Vertex, vertexMatrix [][]bool, maxLength int) ([]Vertex, error) {
 	var previousVertex Vertex
 	var isPreviousVertexSet = false
-	var currentVertex Vertex = vertexShape[0]
-	sortedOuterVertexShape := make([]Vertex, 0, len(vertexShape))
+	var currentVertex Vertex = startingVertex
+	sortedShapeVertices := make([]Vertex, 0, maxLength)
 
 	for {
 		adjacentVertices := make([]Vertex, 0, 8)
@@ -191,10 +213,10 @@ func (region *Region) CreateShape() (shape []Vertex, err error) {
 		if !isPreviousVertexSet {
 			isPreviousVertexSet = true
 			previousVertex = adjacentVertices[0]
-			sortedOuterVertexShape = append(sortedOuterVertexShape, previousVertex)
+			sortedShapeVertices = append(sortedShapeVertices, previousVertex)
 		}
 
-		sortedOuterVertexShape = append(sortedOuterVertexShape, currentVertex)
+		sortedShapeVertices = append(sortedShapeVertices, currentVertex)
 
 		if adjacentVertices[0] == previousVertex {
 			previousVertex = currentVertex
@@ -204,11 +226,11 @@ func (region *Region) CreateShape() (shape []Vertex, err error) {
 			currentVertex = adjacentVertices[0]
 		}
 
-		if currentVertex == sortedOuterVertexShape[0] {
-			return sortedOuterVertexShape, nil
+		if currentVertex == sortedShapeVertices[0] {
+			return sortedShapeVertices, nil
 		}
 
-		if len(sortedOuterVertexShape) >= len(vertexShape) {
+		if len(sortedShapeVertices) >= maxLength {
 			return nil, errors.New("region-to-shape: could not close shape")
 		}
 	}
