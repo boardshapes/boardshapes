@@ -14,22 +14,6 @@ import (
 
 const VERSION = "0.1.0"
 
-func GetNRGBA(c color.Color) color.NRGBA {
-	var r, g, b, a uint32
-
-	if nrgba, ok := c.(color.NRGBA); ok {
-		// use non-alpha-premultiplied colors
-		return nrgba
-	}
-	// use alpha-premultiplied colors
-	r, g, b, a = c.RGBA()
-	mult := 65535 / float64(a)
-	// undo alpha-premultiplication
-	r, g, b = uint32(float64(r)*mult), uint32(float64(g)*mult), uint32(float64(b)*mult)
-	// reduce from 0-65535 to 0-255
-	return color.NRGBA{uint8(r / 256), uint8(g / 256), uint8(b / 256), uint8(a / 256)}
-}
-
 // func manhattanDistance(a Vertex, b Vertex) int {
 // 	return absDiff(int(a.X), int(b.X)) + absDiff(int(a.Y), int(b.Y))
 // }
@@ -468,9 +452,4 @@ func CreateShapes(img image.Image, opts ShapeCreationOptions) (data *Boardshapes
 	}
 
 	return
-}
-
-type SettableImage = interface {
-	image.Image
-	Set(x, y int, color color.Color)
 }
