@@ -185,7 +185,7 @@ func BinaryDeserialize(r io.Reader, options map[string]any) (*main.BoardshapesDa
 	// add color names to shapes
 	for i, shape := range shapes {
 		if shape.Color != nil {
-			colorName, ok := colors[shape.Color.(color.NRGBA)]
+			colorName, ok := colors[main.GetNRGBA(shape.Color)]
 			if ok {
 				shape.ColorName = colorName
 				shapes[i] = shape
@@ -207,7 +207,7 @@ func BinaryDeserialize(r io.Reader, options map[string]any) (*main.BoardshapesDa
 	// restore color to shapes using masks
 	for _, shapeNumber := range shapesUsingMasks {
 		shape := shapes[shapeNumber]
-		img, ok := shape.Image.(shared.SettableImage)
+		img, ok := shape.Image.(main.SettableImage)
 		if ok {
 			for y := 0; y < img.Bounds().Dy(); y++ {
 				for x := 0; x < img.Bounds().Dx(); x++ {

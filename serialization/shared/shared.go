@@ -1,8 +1,6 @@
 package shared
 
 import (
-	"image"
-	"image/color"
 	"strings"
 )
 
@@ -15,9 +13,4 @@ func (e ErrUnknownChunkType) Error() string {
 
 func TrimNullByte(s string) string {
 	return strings.TrimRight(s, "\x00")
-}
-
-type SettableImage = interface {
-	image.Image
-	Set(x, y int, color color.Color)
 }
