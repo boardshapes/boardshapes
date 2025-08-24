@@ -6,9 +6,7 @@ import (
 	"fmt"
 	"image"
 	"image/color"
-	"image/png"
 	"math"
-	"os"
 	"slices"
 
 	"golang.org/x/image/draw"
@@ -357,18 +355,6 @@ func (sd ShapeData) Equal(other ShapeData) bool {
 	for y := range height {
 		for x := range width {
 			if sd.Image.At(aBds.Min.X+x, aBds.Min.Y+y) != other.Image.At(bBds.Min.X+x, bBds.Min.Y+y) {
-				img1, err := os.Create("bad1.png")
-				if err != nil {
-					panic(err)
-				}
-				defer img1.Close()
-				png.Encode(img1, sd.Image)
-				img2, err := os.Create("bad2.png")
-				if err != nil {
-					panic(err)
-				}
-				defer img2.Close()
-				png.Encode(img2, other.Image)
 				return false
 			}
 		}
