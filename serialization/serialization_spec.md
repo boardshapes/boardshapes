@@ -162,4 +162,41 @@ Therefore our final chunk data looks like this:
 
 ## JSON
 
-WIP
+The JSON format is a straightforward, human-readable representation of Boardshapes data. It is designed for interoperability and ease of inspection, at the cost of larger file size compared to the binary format.
+
+### Structure
+
+A serialized Boardshapes dataset in JSON is an object with the following fields:
+
+- `version` (string): The version of the Boardshapes format (e.g., `"0.1.0"`).
+- `shapes` (array): An array of shape objects, each representing a single shape.
+
+Each shape object contains:
+
+- `number` (integer): The unique identifier for the shape.
+- `cornerX` (integer): The X coordinate of the shape's top-left corner in the source image.
+- `cornerY` (integer): The Y coordinate of the shape's top-left corner in the source image.
+- `path` (array of integers): The shape's path as a flat array of vertex coordinates. Each pair of values represents the X and Y coordinates of a vertex (e.g., `[x0, y0, x1, y1, ...]`).
+- `color` (object): The shape's color as an object with fields `R`, `G`, `B`, and `A` (all integers, 0–255).
+- `colorString` (string): The name of the color, if available (e.g., `"Red"`), or an empty string if not related to a named color.
+- `image` (string): The shape's image as a base64-encoded PNG, or an empty string if not present.
+
+### Example
+
+```json
+{
+  "version": "0.1.0",
+  "shapes": [
+    {
+      "number": 0,
+      "cornerX": 12,
+      "cornerY": 34,
+      "path": [0, 0, 10, 0, 10, 10, 0, 10],
+      "color": { "R": 255, "G": 0, "B": 0, "A": 255 },
+      "colorString": "Red",
+      "image": "iVBORw0KGgoAAAANSUhEUgAA..." // base64 PNG
+    }
+    // ... more shapes ...
+  ]
+}
+```
