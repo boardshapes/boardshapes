@@ -43,7 +43,9 @@ This chunk should not appear more than once.
 
 The value of the first byte of the chunk should be the number of colors in this color table. Following that, each color in the table should be represented by a 32-bit RGBA color followed by the name of the color a null-terminated UTF-8 string.
 
-Example Color Table chunk:
+#### Example
+
+This is a typical color table for Boardshapes data generated with default settings.
 
 ```
 0x04FF0000FF5265540000FF00FF477265656E000000FFFF426C756500000000FF426C61636B00
@@ -89,7 +91,7 @@ The color is represented by a 32-bit RGBA color.
 
 Represents a shape's appearance as a PNG image.
 
-It is not recommended to use this chunk type while also using "[11] Shape Mask".
+It is not recommended to use this chunk type while also using [[11] Shape Mask](#11-shape-mask).
 
 #### Structure
 
@@ -105,7 +107,16 @@ The rest of the data in the chunk is the shape's image in PNG format.
 
 Represents a shape's appearance as a mask.
 
-It is not recommended to use this chunk type while also using "[10] Shape Image".
+This mask, along with data about the shapes position (see [[10] Shape Geometry](#8-shape-geometry)) can be used to extract the image for the shape from a base image. If no base image is provided, it can fallback to using the shape's color (see [[9] Shape Color](#9-shape-color)).
+
+It is not recommended to use this chunk type while also using [[10] Shape Image](#10-shape-image).
+
+It is recommended to use this chunk type instead of [[10] Shape Image](#10-shape-image) in any scenario where:
+
+1. The base PNG/JPEG image, generally the same image that generated the Boardshapes data, is available during deserialization, so that masks can be used against it.
+2. The color palette of the shape images only consists of the shape's designated color (see [[9] Shape Color](#9-shape-color)) and blank pixels.
+
+This is because storing masks instead of PNG images takes up significantly less space.
 
 #### Structure
 
@@ -113,10 +124,39 @@ The value of the first 4 bytes in the chunk is the shape's unique number as a bi
 
 The next 2 bytes are the width of the mask as a big-endian 16-bit unsigned integer.
 
-The next byte is a boolean value determining if the mask starts from the top-left filled or empty.
+The next byte is a boolean value determining if the mask starts from the top-left filled or empty. This is known as the "starts filled" byte.
 
-The rest of the data are variable-length integers representing a number of pixels that are either filled or empty, terminated by a null byte.
-Please make this make sense later ^^^
+The rest of the data representing the mask is a series of unsigned variable-length integers terminated by a null byte. Each unsigned variable-length integer represents a "run-length" of pixels that are either all filled or all empty. You can learn more about unsigned variable-length integers [from this example in the Go documentation.](https://pkg.go.dev/encoding/binary@go1.25.0#example-PutUvarint)
+
+Whether or not the first run-length represents a number of empty pixels or a number of filled pixels depends on the value of the "starts filled" byte. Past the first run-length, it alternates between filled and empty.
+
+#### Example
+
+Suppose we want to represent this image with a mask.
+
+![sample image](./spec_img/shape_mask_sample.png)
+
+Let's have the shape's number be 7. We can see that the width of the shape is 9 pixels, so that will be the width of the mask. Since the top-left pixel is empty, we want the "starts filled" byte to be 0.
+
+So far, our chunk data looks like this:
+
+```
+0x00000007000900
+```
+
+Now we'll find our "run-lengths" by finding the lengths of series of filled or empty pixels.
+
+![sample image with run lengths](spec_img/shape_mask.png)
+
+Therefore our run lengths are: 1, 2, 3, 2, 1, 4, 1, 22, 1, 7, 2, 7, 3, 5, 5, 3, 7, 1, 4
+
+Since all of these numbers are under 128, we can represent all of them as single bytes like this: `0x01`, `0x02`, `0x03`, `0x02`, `0x01`, `0x04`, `0x01`, `0x16`, `0x01`, `0x07`, `0x02`, `0x07`, `0x03`, `0x05`, `0x05`, `0x03`, `0x07`, `0x01`, `0x04`.
+
+Therefore our final chunk data looks like this:
+
+```
+0x0000000700090001020302010401160107020703050503070104
+```
 
 ---
 
