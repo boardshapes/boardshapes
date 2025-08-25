@@ -8,7 +8,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"errors"
-	"image"
 	"image/color"
 	"image/png"
 	"io"
@@ -24,7 +23,8 @@ const (
 	CHUNK_SHAPE_MASK     = 11
 )
 
-type DeserializeFunc func(r io.Reader, options map[string]any) (*main.BoardshapesData, error)
+type BinaryDeserializeFunc func(r io.Reader, options map[string]any) (*main.BoardshapesData, error)
+type JsonDeserializeFunc func(r io.Reader, options map[string]any) (*main.BoardshapesData, error)
 
 // the byte is the chunk ID
 type ErrUnknownChunkType byte
@@ -37,8 +37,12 @@ var ErrVersionNotFound = errors.New("version of the data could not be found, can
 var ErrInvalidVersion = errors.New("version of the data is invalid, cannot deserialize with backwards-compatible deserializer")
 var ErrIncompatibleVersion = errors.New("version of the data is incompatible with the backwards-compatible deserializer, cannot deserialize")
 
-var deserializers = map[string]DeserializeFunc{
+var binaryDeserializers = map[string]BinaryDeserializeFunc{
 	"0.1": v0_1.BinaryDeserialize,
+}
+
+var jsonDeserializers = map[string]JsonDeserializeFunc{
+	"0.1": v0_1.JsonDeserialize,
 }
 
 type SerializationOptions struct {
@@ -191,7 +195,7 @@ func BinaryDeserialize(r io.Reader, options map[string]any) (*main.BoardshapesDa
 		return nil, ErrVersionNotFound
 	}
 
-	deserializeFunc, ok := deserializers[vnums[0]+"."+vnums[1]]
+	deserializeFunc, ok := binaryDeserializers[vnums[0]+"."+vnums[1]]
 	if !ok {
 		return nil, ErrIncompatibleVersion
 	}
@@ -206,15 +210,15 @@ type JSONData struct {
 
 type JSONShapeData struct {
 	Number      int         `json:"number"`
-	CornerX     int         `json:"corner_x"`
-	CornerY     int         `json:"corner_y"`
+	CornerX     int         `json:"cornerX"`
+	CornerY     int         `json:"cornerY"`
 	Shape       []uint16    `json:"path"`
 	Color       color.NRGBA `json:"color"`
-	ColorString string      `json:"color_string"`
+	ColorString string      `json:"colorString"`
 	Image       string      `json:"image"`
 }
 
-func JsonSerialize(data *main.BoardshapesData) ([]byte, error) {
+func JsonSerialize(data *main.BoardshapesData) (io.Reader, error) {
 	jsonData := JSONData{
 		Version: data.Version,
 		Shapes:  make([]JSONShapeData, len(data.Shapes)),
@@ -241,57 +245,45 @@ func JsonSerialize(data *main.BoardshapesData) ([]byte, error) {
 			CornerX:     shape.CornerX,
 			CornerY:     shape.CornerY,
 			Shape:       points,
-			Color:       shape.Color.(color.NRGBA),
+			Color:       main.GetNRGBA(shape.Color),
 			ColorString: shape.ColorName,
 			Image:       imgBase64,
 		}
 	}
 
-	return json.Marshal(jsonData)
-}
-
-func JsonDeserialize(d []byte) (*main.BoardshapesData, error) {
-	var jsonData JSONData
-	if err := json.Unmarshal(d, &jsonData); err != nil {
+	var r bytes.Buffer
+	if err := json.NewEncoder(&r).Encode(jsonData); err != nil {
 		return nil, err
 	}
 
-	data := &main.BoardshapesData{
-		Version: jsonData.Version,
-		Shapes:  make([]main.ShapeData, len(jsonData.Shapes)),
+	return &r, nil
+}
+
+type JSONWithVersion struct {
+	Version string `json:"version"`
+}
+
+func JsonDeserialize(r io.Reader, options map[string]any) (*main.BoardshapesData, error) {
+	var buf bytes.Buffer
+	_, err := buf.ReadFrom(r)
+	if err != nil {
+		return nil, err
 	}
 
-	for i, jsonShape := range jsonData.Shapes {
-		path := make([]main.Vertex, len(jsonShape.Shape)/2)
-		for j := range path {
-			path[j] = main.Vertex{
-				X: jsonShape.Shape[j*2],
-				Y: jsonShape.Shape[j*2+1],
-			}
-		}
-
-		var img image.Image
-		if jsonShape.Image != "" {
-			imgBytes, err := base64.StdEncoding.DecodeString(jsonShape.Image)
-			if err != nil {
-				return nil, err
-			}
-			img, err = png.Decode(bytes.NewReader(imgBytes))
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		data.Shapes[i] = main.ShapeData{
-			Number:    jsonShape.Number,
-			CornerX:   jsonShape.CornerX,
-			CornerY:   jsonShape.CornerY,
-			Path:      path,
-			Color:     jsonShape.Color,
-			ColorName: jsonShape.ColorString,
-			Image:     img,
-		}
+	var jsonWithVersion JSONWithVersion
+	if err := json.Unmarshal(buf.Bytes(), &jsonWithVersion); err != nil {
+		return nil, err
 	}
 
-	return data, nil
+	vnums := strings.Split(jsonWithVersion.Version, ".")
+	if len(vnums) < 2 {
+		return nil, ErrVersionNotFound
+	}
+
+	deserializeFunc, ok := jsonDeserializers[vnums[0]+"."+vnums[1]]
+	if !ok {
+		return nil, ErrIncompatibleVersion
+	}
+
+	return deserializeFunc(&buf, options)
 }

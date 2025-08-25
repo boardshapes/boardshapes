@@ -4,7 +4,9 @@ import (
 	main "boardshapes/boardshapes"
 	"boardshapes/boardshapes/serialization/shared"
 	"bytes"
+	"encoding/base64"
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"image"
 	"image/color"
@@ -222,6 +224,67 @@ func BinaryDeserialize(r io.Reader, options map[string]any) (*main.BoardshapesDa
 	data.Shapes = make([]main.ShapeData, 0, len(shapes))
 	for _, shape := range shapes {
 		data.Shapes = append(data.Shapes, shape)
+	}
+
+	return data, nil
+}
+
+type JSONData struct {
+	Version string          `json:"version"`
+	Shapes  []JSONShapeData `json:"shapes"`
+}
+
+type JSONShapeData struct {
+	Number      int         `json:"number"`
+	CornerX     int         `json:"cornerX"`
+	CornerY     int         `json:"cornerY"`
+	Shape       []uint16    `json:"path"`
+	Color       color.NRGBA `json:"color"`
+	ColorString string      `json:"colorString"`
+	Image       string      `json:"image"`
+}
+
+func JsonDeserialize(r io.Reader, options map[string]any) (*main.BoardshapesData, error) {
+	var jsonData JSONData
+	if err := json.NewDecoder(r).Decode(&jsonData); err != nil {
+		return nil, err
+	}
+
+	data := &main.BoardshapesData{
+		Version: jsonData.Version,
+		Shapes:  make([]main.ShapeData, len(jsonData.Shapes)),
+	}
+
+	for i, jsonShape := range jsonData.Shapes {
+		path := make([]main.Vertex, len(jsonShape.Shape)/2)
+		for j := range path {
+			path[j] = main.Vertex{
+				X: jsonShape.Shape[j*2],
+				Y: jsonShape.Shape[j*2+1],
+			}
+		}
+
+		var img image.Image
+		if jsonShape.Image != "" {
+			imgBytes, err := base64.StdEncoding.DecodeString(jsonShape.Image)
+			if err != nil {
+				return nil, err
+			}
+			img, err = png.Decode(bytes.NewReader(imgBytes))
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		data.Shapes[i] = main.ShapeData{
+			Number:    jsonShape.Number,
+			CornerX:   jsonShape.CornerX,
+			CornerY:   jsonShape.CornerY,
+			Path:      path,
+			Color:     jsonShape.Color,
+			ColorName: jsonShape.ColorString,
+			Image:     img,
+		}
 	}
 
 	return data, nil

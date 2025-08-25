@@ -109,7 +109,7 @@ func TestJsonSerialization(t *testing.T) {
 			}
 			t.Logf("serialized shapes: %d", len(data.Shapes))
 
-			result, err := JsonDeserialize(b)
+			result, err := JsonDeserialize(b, nil)
 			if err != nil {
 				t.Errorf("JsonDeserialize() error = %v", err)
 			}
