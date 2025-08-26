@@ -232,9 +232,10 @@ func OptimizeShape(sortedVertexShape []Vertex) []Vertex {
 		}
 	}
 
-	//Check how many vertices are left after straight optimization to determine if RDP is needed
+	//Check number of vertices after straight optimization to determine if RDP is needed
+	//This number can be changed if need be
 	if len(optimizedShape) > 15 {
-		//split shape in half by finding furthest vertex from start
+		//Split shape in half by finding furthest vertex from the startpoint
 		distance := 0.0
 		furthest := 0
 		for i := range len(sortedVertexShape) {
@@ -245,8 +246,10 @@ func OptimizeShape(sortedVertexShape []Vertex) []Vertex {
 				distance = d
 			}
 		}
+		//Cut in half
 		half1 := sortedVertexShape[:furthest+1]
 		half2 := sortedVertexShape[furthest:]
+		//Add the starting point to the end of the second half
 		half2 = append(half2, half1[0])
 
 		//Perform RDP on the two halves
@@ -261,27 +264,33 @@ func OptimizeShape(sortedVertexShape []Vertex) []Vertex {
 }
 
 func RDPOptimizer(sortedVertexShape []Vertex) []Vertex {
-	//TWEAK THIS
+	//Check number of points
+	if len(sortedVertexShape) < 2 {
+		return sortedVertexShape
+	}
+
+	//This is probably fine enough
 	e := 10.0
 
-	index := 0
+	start := 0
+	end := len(sortedVertexShape) - 1
 	maxD := -1.0
 	p1 := sortedVertexShape[0]
-	p2 := sortedVertexShape[len(sortedVertexShape)-1]
+	p2 := sortedVertexShape[end]
 	xDiff := p2.X - p1.X
 	yDiff := p2.Y - p1.Y
-	for i, p := range sortedVertexShape[1 : len(sortedVertexShape)-1] {
+	for i, p := range sortedVertexShape[1:end] {
 		//Perpendicular Distance
 		d := math.Abs(float64(yDiff*p.X - xDiff*p.Y + p2.X*p1.Y - p2.Y*p1.X))
 		if d > maxD {
-			index = i + 1
+			start = i + 1
 			maxD = d
 		}
 	}
 	if maxD > e {
-		return append(RDPOptimizer(sortedVertexShape[:index+1]), RDPOptimizer(sortedVertexShape[index:])[1:]...)
+		return append(RDPOptimizer(sortedVertexShape[:start+1]), RDPOptimizer(sortedVertexShape[start:])[1:]...)
 	}
-	return []Vertex{sortedVertexShape[0], sortedVertexShape[len(sortedVertexShape)-1]}
+	return []Vertex{sortedVertexShape[0], sortedVertexShape[end]}
 }
 
 // Resizes the image to the default 1920x1080. Uses [ResizeImageTo].
