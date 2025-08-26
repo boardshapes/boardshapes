@@ -220,16 +220,78 @@ func findSortedShapeVertices(startingVertex Vertex, vertexMatrix [][]bool, maxLe
 	}
 }
 
-func StraightOpt(sortedVertexShape []Vertex) []Vertex {
+func OptimizeShape(sortedVertexShape []Vertex) []Vertex {
+	//Try optimizaing straight lines
+	var optimizedShape []Vertex
 	for i := 2; i < len(sortedVertexShape); i++ {
 		x1, y1 := sortedVertexShape[i-2].DirectionTo(sortedVertexShape[i-1])
 		x2, y2 := sortedVertexShape[i-1].DirectionTo(sortedVertexShape[i])
 		if x1 == x2 && y1 == y2 {
-			sortedVertexShape = append(sortedVertexShape[:i-1], sortedVertexShape[i:]...)
+			optimizedShape = append(sortedVertexShape[:i-1], sortedVertexShape[i:]...)
 			i--
 		}
 	}
-	return sortedVertexShape
+
+	//Check number of vertices after straight optimization to determine if RDP is needed
+	//This number can be changed if need be
+	if len(optimizedShape) > 15 {
+		//Split shape in half by finding furthest vertex from the startpoint
+		distance := 0.0
+		furthest := 0
+		for i := range len(sortedVertexShape) {
+			//Euclidean Distance
+			dx, dy := sortedVertexShape[0].X-sortedVertexShape[i].X, sortedVertexShape[0].Y-sortedVertexShape[i].Y
+			d := math.Sqrt(float64(dx*dx + dy*dy))
+			if d >= distance {
+				furthest = i
+				distance = d
+			}
+		}
+		//Cut in half
+		half1 := sortedVertexShape[:furthest+1]
+		half2 := sortedVertexShape[furthest:]
+		//Add the starting point to the end of the second half
+		half2 = append(half2, half1[0])
+
+		//Perform RDP on the two halves
+		half1 = RDPOptimizer(half1)
+		half2 = RDPOptimizer(half2)
+
+		//Combine halves back into one
+		optimizedShape = append(half1[:len(half1)-1], half2[:len(half2)-1]...)
+	}
+
+	return optimizedShape
+}
+
+func RDPOptimizer(sortedVertexShape []Vertex) []Vertex {
+	//Check number of points
+	if len(sortedVertexShape) < 2 {
+		return sortedVertexShape
+	}
+
+	//This is probably fine enough
+	e := 10.0
+
+	start := 0
+	end := len(sortedVertexShape) - 1
+	maxD := -1.0
+	p1 := sortedVertexShape[0]
+	p2 := sortedVertexShape[end]
+	xDiff := p2.X - p1.X
+	yDiff := p2.Y - p1.Y
+	for i, p := range sortedVertexShape[1:end] {
+		//Perpendicular Distance
+		d := math.Abs(float64(yDiff*p.X - xDiff*p.Y + p2.X*p1.Y - p2.Y*p1.X))
+		if d > maxD {
+			start = i + 1
+			maxD = d
+		}
+	}
+	if maxD > e {
+		return append(RDPOptimizer(sortedVertexShape[:start+1]), RDPOptimizer(sortedVertexShape[start:])[1:]...)
+	}
+	return []Vertex{sortedVertexShape[0], sortedVertexShape[end]}
 }
 
 // Resizes the image to the default 1920x1080. Uses [ResizeImageTo].
@@ -436,7 +498,7 @@ func CreateShapes(img image.Image, opts ShapeCreationOptions) (data *Boardshapes
 		if err != nil {
 			continue
 		}
-		optimizedShape := StraightOpt(shape)
+		optimizedShape := OptimizeShape(shape)
 
 		shapeData := ShapeData{
 			Number:    i,
