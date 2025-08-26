@@ -240,7 +240,8 @@ func OptimizeShape(sortedVertexShape []Vertex) []Vertex {
 		furthest := 0
 		for i := range len(sortedVertexShape) {
 			//Euclidean Distance
-			d := math.Sqrt(math.Pow(float64(sortedVertexShape[0].X-sortedVertexShape[i].X), 2) + math.Pow(float64(sortedVertexShape[0].Y-sortedVertexShape[i].Y), 2))
+			dx, dy := sortedVertexShape[0].X-sortedVertexShape[i].X, sortedVertexShape[0].Y-sortedVertexShape[i].Y
+			d := math.Sqrt(float64(dx*dx + dy*dy))
 			if d >= distance {
 				furthest = i
 				distance = d
