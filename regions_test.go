@@ -35,7 +35,7 @@ func loadImage(path string) image.Image {
 
 type regionTestArgs struct {
 	img          image.Image
-	options      RegionMapOptions
+	options      ShapeCreationOptions
 	regionFilter func(*Region) bool
 }
 
@@ -48,31 +48,31 @@ var regionTests = []regionTest{
 	{
 		name: "lub",
 		args: regionTestArgs{
-			img: loadImage("./build_region_map_test_images/lub.png"),
+			img: loadImage("./test_images/lub.png"),
 		},
 	},
 	{
 		name: "whiteboardshapes",
 		args: regionTestArgs{
-			img: loadImage("./build_region_map_test_images/whiteboardshapes.png"),
+			img: loadImage("./test_images/whiteboardshapes.png"),
 		},
 	},
 	{
 		name: "allwhite",
 		args: regionTestArgs{
-			img: loadImage("./build_region_map_test_images/allwhite.png"),
+			img: loadImage("./test_images/allwhite.png"),
 		},
 	},
 	{
 		name: "allblack",
 		args: regionTestArgs{
-			img: loadImage("./build_region_map_test_images/allblack.png"),
+			img: loadImage("./test_images/allblack.png"),
 		},
 	},
 	{
 		name: "allcolors",
 		args: regionTestArgs{
-			img: loadImage("./build_region_map_test_images/allcolors.png"),
+			img: loadImage("./test_images/allcolors.png"),
 		},
 	},
 }
