@@ -1,8 +1,6 @@
 package main
 
 import (
-	"codejester27/cmps401fa2024/web-app/processing"
-
 	"flag"
 	"fmt"
 	"image"
@@ -22,45 +20,41 @@ func main() {
 
 	flag.Parse()
 	fileInput := flag.Args()
-	fileToOutput, err := fileOpenerDecoder(fileInput)
+	img, err := decodeImageFromFile(fileInput)
 
 	if err != nil {
 		panic(err)
 	}
 
 	if *rFlag {
-		img, err := processing.ResizeImage(fileToOutput)
-		if err != nil {
-			fmt.Println("fix your stuff bruh")
-		}
+		img = boardshapes.ResizeImage(img)
+	}
 
-		if *jFlag {
-			_, regionCount, regionToOutput := processing.SimplifyImage(img, processing.RegionMapOptions{})
-			fmt.Println(regionCount)
+	if *jFlag {
+		simplifiedImage := boardshapes.SimplifyImage(img, boardshapes.RegionMapOptions{})
 
-			for i := 0; i < regionCount -1  ; i++ {
-				currRegion := regionToOutput.GetRegion(processing.RegionIndex(i))
-				regionMeshCreated, err := currRegion.CreateMesh()
+		for i := 0; i < regionCount-1; i++ {
+			currRegion := regionToOutput.GetRegion(boardshapes.RegionIndex(i))
+			regionMeshCreated, err := currRegion.CreateMesh()
 
-				if err != nil {
-					panic(err)
-				}
-				for j := 0; j < len(regionMeshCreated); j++ {
+			if err != nil {
+				panic(err)
+			}
+			for j := 0; j < len(regionMeshCreated); j++ {
 				fmt.Println("X: ", regionMeshCreated[j].X, "Y: ", regionMeshCreated[j].Y)
-				}
 			}
 		}
+	}
 
-		if *mFlag { // im sorry ok.
-			fileRegioned, regionCount, _ := processing.SimplifyImage(img, processing.RegionMapOptions{})
-			fmt.Println(regionCount)
+	if *mFlag { // im sorry ok.
+		fileRegioned, regionCount, _ := boardshapes.SimplifyImage(img, boardshapes.RegionMapOptions{})
+		fmt.Println(regionCount)
 
-			outputFile := fileEncoder(fileRegioned)
-			image_output(outputFile, filepath.Dir(fileInput[0]))
-		} else {
-			outputFile := fileEncoder(img)
-			image_output(outputFile, filepath.Dir(fileInput[0]))
-		}
+		outputFile := fileEncoder(fileRegioned)
+		image_output(outputFile, filepath.Dir(fileInput[0]))
+	} else {
+		outputFile := fileEncoder(img)
+		image_output(outputFile, filepath.Dir(fileInput[0]))
 	}
 
 	fmt.Println("1:", *rFlag)
@@ -71,7 +65,7 @@ func main() {
 
 }
 
-func fileOpenerDecoder(fileInput []string) (image.Image, error) {
+func decodeImageFromFile(fileInput []string) (image.Image, error) {
 
 	joinedFileName := strings.Join(fileInput, "")
 
@@ -109,11 +103,11 @@ func fileEncoder(img image.Image) *os.File {
 		panic(err)
 	}
 	ext := strings.ToLower(filepath.Ext(outputPath))
-	if ext == ".png" {
+	switch ext {
+	case ".png":
 		err = png.Encode(outputFile, img)
-	} else if ext == ".jpeg" || ext == ".jpg" {
+	case ".jpeg", ".jpg":
 		err = jpeg.Encode(outputFile, img, &jpeg.Options{Quality: 100})
-
 	}
 	if err != nil {
 		panic(err)
