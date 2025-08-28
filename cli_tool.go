@@ -11,10 +11,10 @@ import (
 	"strings"
 )
 
-var rFlag = flag.Bool("r", false, "rflag this should be resizing if called")
+var rFlag = flag.Bool("r", false, "rflag this should resize an image")
 var sFlag = flag.String("s", "", "sflag gets a user file output name.")
-var mFlag = flag.Bool("m", false, "mflag simplifies region.")
-var jFlag = flag.Bool("j", false, "jflag should meshify and output to a directory")
+var mFlag = flag.Bool("m", false, "mflag simplifies an image into regions.")
+var jFlag = flag.Bool("j", false, "jflag should meshify an image")
 
 
 
@@ -80,29 +80,20 @@ func image_output(fileToOutput *os.File, inputDir string) {
 	fmt.Printf("Output file path: %s\n", outputFilePath)
 }
 
-func resize(rFlag *bool) (rFlag *bool, image.Image) {
-	if *rFlag {
-		img, err := ResizeImage(fileToOutput)
+func resize(rFlag *bool, imageResize image.Image) (flag *bool, img image.Image) {
+	
+	if rFlag != nil {
+		imageResize, err := ResizeImage(imageResize)
 		if err != nil {
 			fmt.Println("Error occured")	
 			panic(err)	
 		}
-	return *rFlag, img 	} 
+		return rFlag, imageResize
+		} 
+  return
 } 
 
-func main() {
-
-	flag.Parse()
-	fileInput := flag.Args()
-	fileToOutput, err := fileOpenerDecoder(fileInput)
-
-	if err != nil {
-		panic(err)
-	}
-
-  	*rbool, img =  resize(rFlag)
-
-	if *rbool {
+/*func meshify(jFlag *bool, imageMeshify image.Image) (flag *bool, img image.Image) {
 
 		if *jFlag {
 			regionJunk := SimplifyImage(img, RegionMapOptions{})
@@ -120,24 +111,43 @@ func main() {
 				}
 			}
 		}
+}
+*/
+
+func main() {
+
+	flag.Parse()
+	fileInput := flag.Args()
+	imageProc, err := fileOpenerDecoder(fileInput)
+	// take file input path 
+	if err != nil {
+		panic(err)
 	}
-		if *mFlag {.
+
+  	rFlag, imageProc = resize(rFlag, imageProc)
+
+	if rFlag != nil {
+
+		jFlag, img = meshify(jFlag)
+		
+	}
+		if *mFlag {
 			fileRegioned, regionCount, _ := processing.SimplifyImage(img, processing.RegionMapOptions{})
 			fmt.Println(regionCount)
 
 			outputFile := fileEncoder(fileRegioned)
 			image_output(outputFile, filepath.Dir(fileInput[0]))
 		} else {
-			outputFile := fileEncoder(img))
-			image_output(outputFile, filepath.Dir(fileInput[0])
+			outputFile := fileEncoder(img)
+			image_output(outputFile, filepath.Dir(fileInput[0]))
 		}
-	}
+	
 
 	fmt.Println("1:", *rFlag)
 	fmt.Println("2:", *sFlag)
 	fmt.Println("3:", *mFlag)
 	fmt.Println("3.5:", *jFlag)
 	fmt.Println("4:", fileInput)
-
-}
+	}
+ 
 
