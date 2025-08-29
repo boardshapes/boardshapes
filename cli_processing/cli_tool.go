@@ -21,6 +21,7 @@ var noShapes bool
 var binaryOutput bool
 var outputPath string
 var useStdOut bool
+var optimizeShape bool // Its gonna be a bool for now until Epsilon is variable
 
 func init() {
 	const resizeFlagDescription = "Resize the image to fit a specific size while maintaining aspect ratio. " +
@@ -48,6 +49,10 @@ func init() {
 
 	const useStdOutFlagDescription = "If set, the output will be written to stdout instead of a file."
 	flag.BoolVar(&useStdOut, "c", false, useStdOutFlagDescription)
+
+	const optimizeShapeDescription = "If set, the output should be optimized using the RDPoptimizer. " +
+		"If not meshified and sorted optimize will sort and meshify by default."
+	flag.BoolVar(&optimizeShape, "op", false, optimizeShapeDescription)
 }
 
 func main() {
@@ -60,43 +65,13 @@ func main() {
 		panic(err)
 	}
 
-	if resizeImage != "no" {
-		if resizeImage == "" {
-			img = boardshapes.ResizeImage(img)
-		}
-		dimensions := strings.Split(resizeImage, "x")
-		var width, height int
-		if len(dimensions) != 2 {
-			panic(errors.New("invalid resize format: Use [width]x[height], e.g. 800x600, 800x, x600"))
-		}
-		if dimensions[0] != "" {
-			var err error
-			width, err = strconv.Atoi(dimensions[0])
-			if err != nil {
-				panic(errors.New("invalid width value"))
-			}
-		}
-		if dimensions[1] != "" {
-			var err error
-			height, err = strconv.Atoi(dimensions[1])
-			if err != nil {
-				panic(errors.New("invalid height value"))
-			}
-		}
-		if width == 0 && height == 0 {
-			img = boardshapes.ResizeImage(img)
-		} else {
-			img = boardshapes.ResizeImageTo(img, width, height)
-		}
-	}
+	img = resize(resizeImage, img)
+	
 
-	if outputSimplifiedImagePath != "" {
-		simplifiedImage := boardshapes.SimplifyImage(img, boardshapes.ShapeCreationOptions{})
-
-		encodeImageToFile(simplifiedImage, outputSimplifiedImagePath)
-	}
+	outputSimpified(outputSimplifiedImagePath, img)
 
 }
+
 
 func decodeImageFromFile(fileInput []string) (image.Image, error) {
 	joinedFileName := strings.Join(fileInput, "")
@@ -144,4 +119,47 @@ func encodeImageToFile(img image.Image, outPath string) *os.File {
 	}
 	log.Printf("Output file path: %s\n", outPath)
 	return outputFile
+}
+
+func resize(resizeImage string,  img image.Image )  image.Image {
+
+	if resizeImage != "no" {
+		if resizeImage == "" {
+			img = boardshapes.ResizeImage(img)
+		}
+		dimensions := strings.Split(resizeImage, "x")
+		var width, height int
+		if len(dimensions) != 2 {
+			panic(errors.New("invalid resize format: Use [width]x[height], e.g. 800x600, 800x, x600"))
+		}
+		if dimensions[0] != "" {
+			var err error
+			width, err = strconv.Atoi(dimensions[0])
+			if err != nil {
+				panic(errors.New("invalid width value"))
+			}
+		}
+		if dimensions[1] != "" {
+			var err error
+			height, err = strconv.Atoi(dimensions[1])
+			if err != nil {
+				panic(errors.New("invalid height value"))
+			}
+		}
+		if width == 0 && height == 0 {
+			img = boardshapes.ResizeImage(img)
+		} else {
+			img = boardshapes.ResizeImageTo(img, width, height)
+		}
+	}
+
+	return img
+}
+
+func outputSimpified(outputSimplifiedImagePath string, img image.Image) {
+	if outputSimplifiedImagePath != "" {
+		simplifiedImage := boardshapes.SimplifyImage(img, boardshapes.ShapeCreationOptions{})
+
+		encodeImageToFile(simplifiedImage, outputSimplifiedImagePath)
+	}
 }
