@@ -193,7 +193,7 @@ func resize(resizeImage string, img image.Image) image.Image {
 
 func outputSimpified(outputSimplifiedImagePath string, img image.Image) {
 	if outputSimplifiedImagePath != "" {
-		simplifiedImage := boardshapes.SimplifyImage(img, boardshapes.ShapeCreationOptions{})
+		simplifiedImage := boardshapes.SimplifyImage(img, boardshapes.ShapeCreationOptions{EpsilonRDP: optimizeShapeEpsilon})
 
 		encodeImageToFile(simplifiedImage, outputSimplifiedImagePath)
 	}
