@@ -77,9 +77,33 @@ func main() {
 
 	boardShapeData := noShape(noShapes, img, optimizeShapeEpsilon)
 
-	r, err := serialization.JsonSerialize(boardShapeData)
+	if binaryOutput == false {
+		r, err := serialization.JsonSerialize(boardShapeData)
 
-	
+		if err != nil {
+			panic(err)
+		}
+
+		outputPathArg(outputPath, r)
+	}
+
+	if binaryOutput == true {
+		f, _ := os.Create(outputPath)
+		var opts = serialization.SerializationOptions{}
+		if useStdOut == false {
+			err := serialization.BinarySerialize(f, *boardShapeData, &opts)
+			if err != nil {
+				panic(err)
+			}
+		}
+		if useStdOut == true {
+			err := serialization.BinarySerialize(os.Stdout, *boardShapeData, &opts)
+			if err != nil {
+				panic(err)
+			}
+		}
+
+	}
 
 }
 
@@ -183,10 +207,16 @@ func outputPathArg(outputFile string, boarddata io.Reader) {
 			panic(err)
 		}
 		defer f.Close()
+		if useStdOut == false {
+			_, err = io.Copy(f, boarddata)
 
-		_, err = io.Copy(f, boarddata)
-		if err != nil {
-			panic(err)
+			if err != nil {
+				panic(err)
+			}
+		}
+
+		if useStdOut == true {
+			_, err = io.Copy(os.Stdout, boarddata)
 		}
 	}
 }
