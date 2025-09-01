@@ -59,7 +59,7 @@ func TestBinarySerialization(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			data := tt.args.data
 			w := &bytes.Buffer{}
-			if err := BinarySerialize(w, data, tt.args.options); err != nil {
+			if err := BinarySerialize(w, &data, tt.args.options); err != nil {
 				t.Errorf("BinarySerialize() error = %v", err)
 				return
 			}
@@ -102,14 +102,15 @@ func TestJsonSerialization(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			data := tt.args.data
-			b, err := JsonSerialize(&data)
+			w := &bytes.Buffer{}
+			err := JsonSerialize(w, &data)
 			if err != nil {
 				t.Errorf("JsonSerialize() error = %v", err)
 				return
 			}
 			t.Logf("serialized shapes: %d", len(data.Shapes))
 
-			result, err := JsonDeserialize(b, nil)
+			result, err := JsonDeserialize(w, nil)
 			if err != nil {
 				t.Errorf("JsonDeserialize() error = %v", err)
 			}

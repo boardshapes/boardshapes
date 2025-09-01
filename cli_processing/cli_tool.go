@@ -71,40 +71,51 @@ func main() {
 		panic(err)
 	}
 
-	img = resize(resizeImage, img)
+	img = resize(img)
 
 	outputSimpified(outputSimplifiedImagePath, img)
 
-	boardShapeData := noShape(noShapes, img, optimizeShapeEpsilon)
-	if noShapes == false {
-		if binaryOutput == false {
-			r, err := serialization.JsonSerialize(boardShapeData)
+	if !noShapes {
+		boardShapesData := boardshapes.CreateShapes(img, boardshapes.ShapeCreationOptions{
+			EpsilonRDP: optimizeShapeEpsilon,
+		})
 
-			if err != nil {
-				panic(err)
-			}
-
-			outputPathArg(outputPath, r)
+		w, shouldClose := getOutputWriter()
+		if shouldClose {
+			defer w.Close()
 		}
 
-		if binaryOutput == true {
-			f, _ := os.Create(outputPath)
-			var opts = serialization.SerializationOptions{}
-			if useStdOut == false {
-				err := serialization.BinarySerialize(f, *boardShapeData, &opts)
-				if err != nil {
-					panic(err)
-				}
-			}
-			if useStdOut == true {
-				err := serialization.BinarySerialize(os.Stdout, *boardShapeData, &opts)
-				if err != nil {
-					panic(err)
-				}
-			}
+		serializeDataToWriter(w, boardShapesData)
+	}
+}
 
+func serializeDataToWriter(w io.Writer, boardShapesData *boardshapes.BoardshapesData) {
+	if binaryOutput {
+		err := serialization.BinarySerialize(w, boardShapesData, nil)
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		err := serialization.JsonSerialize(w, boardShapesData)
+		if err != nil {
+			panic(err)
 		}
 	}
+}
+
+func getOutputWriter() (w io.WriteCloser, shouldClose bool) {
+	if useStdOut {
+		w = os.Stdout
+		shouldClose = false
+	} else {
+		f, err := os.Create(outputPath)
+		if err != nil {
+			panic(err)
+		}
+		w = f
+		shouldClose = true
+	}
+	return
 }
 
 func decodeImageFromFile(fileInput []string) (image.Image, error) {
@@ -155,7 +166,7 @@ func encodeImageToFile(img image.Image, outPath string) *os.File {
 	return outputFile
 }
 
-func resize(resizeImage string, img image.Image) image.Image {
+func resize(img image.Image) image.Image {
 
 	if resizeImage != "no" {
 		if resizeImage == "" {
@@ -197,35 +208,4 @@ func outputSimpified(outputSimplifiedImagePath string, img image.Image) {
 
 		encodeImageToFile(simplifiedImage, outputSimplifiedImagePath)
 	}
-}
-
-func outputPathArg(outputFile string, boarddata io.Reader) {
-	if outputFile != "" {
-		f, err := os.Create(outputFile)
-
-		if err != nil {
-			panic(err)
-		}
-		defer f.Close()
-		if useStdOut == false {
-			_, err = io.Copy(f, boarddata)
-
-			if err != nil {
-				panic(err)
-			}
-		}
-
-		if useStdOut == true {
-			_, err = io.Copy(os.Stdout, boarddata)
-		}
-	}
-}
-
-func noShape(noShapesFlag bool, img image.Image, optimizeShapeEpsilon float64) (data *boardshapes.BoardshapesData) {
-	if noShapesFlag == false {
-		boarddata := boardshapes.CreateShapes(img, boardshapes.ShapeCreationOptions{EpsilonRDP: optimizeShapeEpsilon})
-		return boarddata
-	}
-
-	return nil
 }
