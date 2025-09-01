@@ -21,7 +21,7 @@ var noShapes bool
 var binaryOutput bool
 var outputPath string
 var useStdOut bool
-var optimizeShape bool // Its gonna be a bool for now until Epsilon is variable
+var optimizeShapeEpsilon float64
 
 func init() {
 	const resizeFlagDescription = "Resize the image to fit a specific size while maintaining aspect ratio. " +
@@ -49,10 +49,14 @@ func init() {
 
 	const useStdOutFlagDescription = "If set, the output will be written to stdout instead of a file."
 	flag.BoolVar(&useStdOut, "c", false, useStdOutFlagDescription)
+	flag.BoolVar(&useStdOut, "stdout", false, useStdOutFlagDescription)
 
-	const optimizeShapeDescription = "If set, the output should be optimized using the RDPoptimizer. " +
-		"If not meshified and sorted optimize will sort and meshify by default."
-	flag.BoolVar(&optimizeShape, "op", false, optimizeShapeDescription)
+	const optimizeShapeEpsilonDescription = "Sets the epsilon value for the Ramer-Douglas-Peucker optimization. " +
+		"Generally, a smaller epsilon value will result in a more detailed shape, while a larger epsilon value will " +
+		"result in a less complex shape. Will use the default epsilon value if not specified or set to 0." +
+		"Will skip RDP optimization entirely if set to a negative value, but will never skip basic straight-line optimization."
+	flag.Float64Var(&optimizeShapeEpsilon, "e", 0.0, optimizeShapeEpsilonDescription)
+	flag.Float64Var(&optimizeShapeEpsilon, "epsilon", 0.0, optimizeShapeEpsilonDescription)
 }
 
 func main() {
@@ -66,12 +70,10 @@ func main() {
 	}
 
 	img = resize(resizeImage, img)
-	
 
 	outputSimpified(outputSimplifiedImagePath, img)
 
 }
-
 
 func decodeImageFromFile(fileInput []string) (image.Image, error) {
 	joinedFileName := strings.Join(fileInput, "")
@@ -121,7 +123,7 @@ func encodeImageToFile(img image.Image, outPath string) *os.File {
 	return outputFile
 }
 
-func resize(resizeImage string,  img image.Image )  image.Image {
+func resize(resizeImage string, img image.Image) image.Image {
 
 	if resizeImage != "no" {
 		if resizeImage == "" {
