@@ -76,35 +76,35 @@ func main() {
 	outputSimpified(outputSimplifiedImagePath, img)
 
 	boardShapeData := noShape(noShapes, img, optimizeShapeEpsilon)
+	if noShapes == false {
+		if binaryOutput == false {
+			r, err := serialization.JsonSerialize(boardShapeData)
 
-	if binaryOutput == false {
-		r, err := serialization.JsonSerialize(boardShapeData)
-
-		if err != nil {
-			panic(err)
-		}
-
-		outputPathArg(outputPath, r)
-	}
-
-	if binaryOutput == true {
-		f, _ := os.Create(outputPath)
-		var opts = serialization.SerializationOptions{}
-		if useStdOut == false {
-			err := serialization.BinarySerialize(f, *boardShapeData, &opts)
 			if err != nil {
 				panic(err)
 			}
+
+			outputPathArg(outputPath, r)
 		}
-		if useStdOut == true {
-			err := serialization.BinarySerialize(os.Stdout, *boardShapeData, &opts)
-			if err != nil {
-				panic(err)
+
+		if binaryOutput == true {
+			f, _ := os.Create(outputPath)
+			var opts = serialization.SerializationOptions{}
+			if useStdOut == false {
+				err := serialization.BinarySerialize(f, *boardShapeData, &opts)
+				if err != nil {
+					panic(err)
+				}
 			}
+			if useStdOut == true {
+				err := serialization.BinarySerialize(os.Stdout, *boardShapeData, &opts)
+				if err != nil {
+					panic(err)
+				}
+			}
+
 		}
-
 	}
-
 }
 
 func decodeImageFromFile(fileInput []string) (image.Image, error) {
