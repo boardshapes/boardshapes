@@ -59,7 +59,7 @@ func TestBinarySerialization(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			data := tt.args.data
 			w := &bytes.Buffer{}
-			if err := BinarySerialize(w, data, tt.args.options); err != nil {
+			if err := BinarySerialize(w, &data, tt.args.options); err != nil {
 				t.Errorf("BinarySerialize() error = %v", err)
 				return
 			}

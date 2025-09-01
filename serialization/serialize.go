@@ -53,7 +53,7 @@ var DefaultOptions = SerializationOptions{
 	UseMasks: true,
 }
 
-func BinarySerialize(w io.Writer, data main.BoardshapesData, options *SerializationOptions) error {
+func BinarySerialize(w io.Writer, data *main.BoardshapesData, options *SerializationOptions) error {
 	if options == nil {
 		options = &DefaultOptions
 	}
