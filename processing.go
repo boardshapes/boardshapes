@@ -220,8 +220,16 @@ func findSortedShapeVertices(startingVertex Vertex, vertexMatrix [][]bool, maxLe
 	}
 }
 
+const DEFAULT_RDP_EPSILON = 10.0
+
 func OptimizeShape(sortedVertexShape []Vertex) []Vertex {
-	//Try optimizaing straight lines
+	return OptimizeShapeWithEpsilon(sortedVertexShape, DEFAULT_RDP_EPSILON)
+}
+
+const MINIMUM_VERTICES_FOR_RDP = 15
+
+func OptimizeShapeWithEpsilon(sortedVertexShape []Vertex, epsilon float64) []Vertex {
+	//Try optimizing straight lines
 	var optimizedShape []Vertex
 	for i := 2; i < len(sortedVertexShape); i++ {
 		x1, y1 := sortedVertexShape[i-2].DirectionTo(sortedVertexShape[i-1])
@@ -232,9 +240,13 @@ func OptimizeShape(sortedVertexShape []Vertex) []Vertex {
 		}
 	}
 
+	//If epsilon is negative, skip RDP optimization
+	if epsilon < 0 {
+		return optimizedShape
+	}
+
 	//Check number of vertices after straight optimization to determine if RDP is needed
-	//This number can be changed if need be
-	if len(optimizedShape) > 15 {
+	if len(optimizedShape) > MINIMUM_VERTICES_FOR_RDP {
 		//Split shape in half by finding furthest vertex from the startpoint
 		distance := 0.0
 		furthest := 0
@@ -254,8 +266,8 @@ func OptimizeShape(sortedVertexShape []Vertex) []Vertex {
 		half2 = append(half2, half1[0])
 
 		//Perform RDP on the two halves
-		half1 = RDPOptimizer(half1)
-		half2 = RDPOptimizer(half2)
+		half1 = RDPOptimizer(half1, epsilon)
+		half2 = RDPOptimizer(half2, epsilon)
 
 		//Combine halves back into one
 		optimizedShape = append(half1[:len(half1)-1], half2[:len(half2)-1]...)
@@ -264,14 +276,11 @@ func OptimizeShape(sortedVertexShape []Vertex) []Vertex {
 	return optimizedShape
 }
 
-func RDPOptimizer(sortedVertexShape []Vertex) []Vertex {
+func RDPOptimizer(sortedVertexShape []Vertex, epsilon float64) []Vertex {
 	//Check number of points
 	if len(sortedVertexShape) < 2 {
 		return sortedVertexShape
 	}
-
-	//This is probably fine enough
-	e := 10.0
 
 	start := 0
 	end := len(sortedVertexShape) - 1
@@ -288,8 +297,10 @@ func RDPOptimizer(sortedVertexShape []Vertex) []Vertex {
 			maxD = d
 		}
 	}
-	if maxD > e {
-		return append(RDPOptimizer(sortedVertexShape[:start+1]), RDPOptimizer(sortedVertexShape[start:])[1:]...)
+	if maxD > epsilon {
+		return append(
+			RDPOptimizer(sortedVertexShape[:start+1], epsilon),
+			RDPOptimizer(sortedVertexShape[start:], epsilon)[1:]...)
 	}
 	return []Vertex{sortedVertexShape[0], sortedVertexShape[end]}
 }
@@ -431,7 +442,11 @@ func (sd ShapeData) Equal(other ShapeData) bool {
 }
 
 type ShapeCreationOptions struct {
-	NoColorSeparation, AllowWhite, PreserveColor, KeepSmallRegions bool
+	NoColorSeparation,
+	AllowWhite,
+	PreserveColor,
+	KeepSmallRegions bool
+	EpsilonRDP float64
 }
 
 func isRegionLargeEnough(region *Region) bool {
@@ -498,7 +513,12 @@ func CreateShapes(img image.Image, opts ShapeCreationOptions) (data *Boardshapes
 		if err != nil {
 			continue
 		}
-		optimizedShape := OptimizeShape(shape)
+
+		if opts.EpsilonRDP == 0 {
+			shape = OptimizeShape(shape)
+		} else {
+			shape = OptimizeShapeWithEpsilon(shape, opts.EpsilonRDP)
+		}
 
 		shapeData := ShapeData{
 			Number:    i,
@@ -507,7 +527,7 @@ func CreateShapes(img image.Image, opts ShapeCreationOptions) (data *Boardshapes
 			CornerX:   minX,
 			CornerY:   minY,
 			Image:     regionImage,
-			Path:      optimizedShape,
+			Path:      shape,
 		}
 
 		data.Shapes = append(data.Shapes, shapeData)

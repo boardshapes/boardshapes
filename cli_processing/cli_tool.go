@@ -2,12 +2,14 @@ package main
 
 import (
 	"boardshapes/boardshapes"
+	"boardshapes/boardshapes/serialization"
 	"errors"
 	"flag"
 	"fmt"
 	"image"
 	"image/jpeg"
 	"image/png"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -21,7 +23,7 @@ var noShapes bool
 var binaryOutput bool
 var outputPath string
 var useStdOut bool
-var optimizeShape bool // Its gonna be a bool for now until Epsilon is variable
+var optimizeShapeEpsilon float64
 
 func init() {
 	const resizeFlagDescription = "Resize the image to fit a specific size while maintaining aspect ratio. " +
@@ -49,10 +51,14 @@ func init() {
 
 	const useStdOutFlagDescription = "If set, the output will be written to stdout instead of a file."
 	flag.BoolVar(&useStdOut, "c", false, useStdOutFlagDescription)
+	flag.BoolVar(&useStdOut, "stdout", false, useStdOutFlagDescription)
 
-	const optimizeShapeDescription = "If set, the output should be optimized using the RDPoptimizer. " +
-		"If not meshified and sorted optimize will sort and meshify by default."
-	flag.BoolVar(&optimizeShape, "op", false, optimizeShapeDescription)
+	const optimizeShapeEpsilonDescription = "Sets the epsilon value for the Ramer-Douglas-Peucker optimization. " +
+		"Generally, a smaller epsilon value will result in a more detailed shape, while a larger epsilon value will " +
+		"result in a less complex shape. Will use the default epsilon value if not specified or set to 0." +
+		"Will skip RDP optimization entirely if set to a negative value, but will never skip basic straight-line optimization."
+	flag.Float64Var(&optimizeShapeEpsilon, "e", 0.0, optimizeShapeEpsilonDescription)
+	flag.Float64Var(&optimizeShapeEpsilon, "epsilon", 0.0, optimizeShapeEpsilonDescription)
 }
 
 func main() {
@@ -61,18 +67,20 @@ func main() {
 	fileInput := flag.Args()
 	img, err := decodeImageFromFile(fileInput)
 
-	
-
 	if err != nil {
 		panic(err)
 	}
-	if (resizeImage != "no" ) {
-	img = resize(resizeImage, img)	
-	}
 
-	if (outputSimplifiedImagePath != "") {
+	img = resize(resizeImage, img)
+
 	outputSimpified(outputSimplifiedImagePath, img)
-	}
+
+	boardShapeData := noShape(noShapes, img, optimizeShapeEpsilon)
+
+	r, err := serialization.JsonSerialize(boardShapeData)
+
+	
+
 }
 
 func decodeImageFromFile(fileInput []string) (image.Image, error) {
@@ -123,9 +131,9 @@ func encodeImageToFile(img image.Image, outPath string) *os.File {
 	return outputFile
 }
 
-func resize(resizeImage string,  img image.Image )  image.Image {
+func resize(resizeImage string, img image.Image) image.Image {
 
-	
+	if resizeImage != "no" {
 		if resizeImage == "" {
 			img = boardshapes.ResizeImage(img)
 		}
@@ -153,8 +161,9 @@ func resize(resizeImage string,  img image.Image )  image.Image {
 		} else {
 			img = boardshapes.ResizeImageTo(img, width, height)
 		}
-	
 
+		return img
+	}
 	return img
 }
 
@@ -164,4 +173,29 @@ func outputSimpified(outputSimplifiedImagePath string, img image.Image) {
 
 		encodeImageToFile(simplifiedImage, outputSimplifiedImagePath)
 	}
+}
+
+func outputPathArg(outputFile string, boarddata io.Reader) {
+	if outputFile != "" {
+		f, err := os.Create(outputFile)
+
+		if err != nil {
+			panic(err)
+		}
+		defer f.Close()
+
+		_, err = io.Copy(f, boarddata)
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
+func noShape(noShapesFlag bool, img image.Image, optimizeShapeEpsilon float64) (data *boardshapes.BoardshapesData) {
+	if noShapesFlag == false {
+		boarddata := boardshapes.CreateShapes(img, boardshapes.ShapeCreationOptions{EpsilonRDP: optimizeShapeEpsilon})
+		return boarddata
+	}
+
+	return nil
 }
