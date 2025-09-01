@@ -61,17 +61,19 @@ func main() {
 	fileInput := flag.Args()
 	img, err := decodeImageFromFile(fileInput)
 
+	
+
 	if err != nil {
 		panic(err)
 	}
+	if (resizeImage != "no" ) {
+	img = resize(resizeImage, img)	
+	}
 
-	img = resize(resizeImage, img)
-	
-
+	if (outputSimplifiedImagePath != "") {
 	outputSimpified(outputSimplifiedImagePath, img)
-
+	}
 }
-
 
 func decodeImageFromFile(fileInput []string) (image.Image, error) {
 	joinedFileName := strings.Join(fileInput, "")
@@ -123,7 +125,7 @@ func encodeImageToFile(img image.Image, outPath string) *os.File {
 
 func resize(resizeImage string,  img image.Image )  image.Image {
 
-	if resizeImage != "no" {
+	
 		if resizeImage == "" {
 			img = boardshapes.ResizeImage(img)
 		}
@@ -151,7 +153,7 @@ func resize(resizeImage string,  img image.Image )  image.Image {
 		} else {
 			img = boardshapes.ResizeImageTo(img, width, height)
 		}
-	}
+	
 
 	return img
 }
