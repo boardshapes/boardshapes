@@ -1,6 +1,6 @@
 # Boardshapes Cli Tool 
 
-This command-line tool is mainly to be used for processing boardshapes relevant data. Concerned with boardshapes image processesing and boardshapes data.  
+This command-line tool to be used for processing boardshapes data and image data. Concerned with boardshapes image processing and boardshapes data. Functionality includes resizing and simplifying images. Sending serialized boardshapes data to a file or stdout.
 
 ## Usage 
 
