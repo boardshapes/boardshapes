@@ -53,7 +53,7 @@ var DefaultOptions = SerializationOptions{
 	UseMasks: true,
 }
 
-func BinarySerialize(w io.Writer, data main.BoardshapesData, options *SerializationOptions) error {
+func BinarySerialize(w io.Writer, data *main.BoardshapesData, options *SerializationOptions) error {
 	if options == nil {
 		options = &DefaultOptions
 	}
@@ -218,7 +218,7 @@ type JSONShapeData struct {
 	Image       string      `json:"image"`
 }
 
-func JsonSerialize(data *main.BoardshapesData) (io.Reader, error) {
+func JsonSerialize(w io.Writer, data *main.BoardshapesData) error {
 	jsonData := JSONData{
 		Version: data.Version,
 		Shapes:  make([]JSONShapeData, len(data.Shapes)),
@@ -235,7 +235,7 @@ func JsonSerialize(data *main.BoardshapesData) (io.Reader, error) {
 		if shape.Image != nil {
 			buf := new(bytes.Buffer)
 			if err := png.Encode(buf, shape.Image); err != nil {
-				return nil, err
+				return err
 			}
 			imgBase64 = base64.StdEncoding.EncodeToString(buf.Bytes())
 		}
@@ -251,12 +251,11 @@ func JsonSerialize(data *main.BoardshapesData) (io.Reader, error) {
 		}
 	}
 
-	var r bytes.Buffer
-	if err := json.NewEncoder(&r).Encode(jsonData); err != nil {
-		return nil, err
+	if err := json.NewEncoder(w).Encode(jsonData); err != nil {
+		return err
 	}
 
-	return &r, nil
+	return nil
 }
 
 type JSONWithVersion struct {
