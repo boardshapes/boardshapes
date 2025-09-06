@@ -1,4 +1,4 @@
-module boardshapes/boardshapes
+module github.com/boardshapes/boardshapes
 
 go 1.24
 
