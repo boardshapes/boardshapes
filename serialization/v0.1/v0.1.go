@@ -1,8 +1,6 @@
 package v0_1
 
 import (
-	main "boardshapes/boardshapes"
-	"boardshapes/boardshapes/serialization/shared"
 	"bytes"
 	"encoding/base64"
 	"encoding/binary"
@@ -12,6 +10,9 @@ import (
 	"image/color"
 	"image/png"
 	"io"
+
+	main "github.com/boardshapes/boardshapes"
+	"github.com/boardshapes/boardshapes/serialization/shared"
 )
 
 const (

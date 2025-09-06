@@ -1,8 +1,6 @@
 package serialization
 
 import (
-	main "boardshapes/boardshapes"
-	v0_1 "boardshapes/boardshapes/serialization/v0.1"
 	"bytes"
 	"encoding/base64"
 	"encoding/binary"
@@ -12,6 +10,9 @@ import (
 	"image/png"
 	"io"
 	"strings"
+
+	main "github.com/boardshapes/boardshapes"
+	v0_1 "github.com/boardshapes/boardshapes/serialization/v0.1"
 )
 
 const (

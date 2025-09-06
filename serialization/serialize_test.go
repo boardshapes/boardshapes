@@ -1,13 +1,14 @@
 package serialization
 
 import (
-	main "boardshapes/boardshapes"
 	"bytes"
 	"image"
 	_ "image/jpeg"
 	_ "image/png"
 	"os"
 	"testing"
+
+	main "github.com/boardshapes/boardshapes"
 )
 
 func loadImage(filepath string) image.Image {

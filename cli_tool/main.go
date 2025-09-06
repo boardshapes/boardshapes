@@ -1,8 +1,6 @@
 package main
 
 import (
-	"boardshapes/boardshapes"
-	"boardshapes/boardshapes/serialization"
 	"errors"
 	"flag"
 	"fmt"
@@ -15,6 +13,9 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/boardshapes/boardshapes"
+	"github.com/boardshapes/boardshapes/serialization"
 )
 
 var resizeImage string
