@@ -26,3 +26,6 @@ test_out_*
 
 # Example/test images
 example_images
+
+# CLI tool binaries
+cli_tool/release
