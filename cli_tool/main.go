@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-
+	"syscall/js"
 	"github.com/boardshapes/boardshapes"
 	"github.com/boardshapes/boardshapes/serialization"
 )
@@ -52,6 +52,7 @@ func init() {
 	const useStdOutFlagDescription = "If set, the output will be written to stdout instead of a file."
 	flag.BoolVar(&useStdOut, "c", false, useStdOutFlagDescription)
 	flag.BoolVar(&useStdOut, "stdout", false, useStdOutFlagDescription)
+
 
 	const optimizeShapeEpsilonDescription = "Sets the epsilon value for the Ramer-Douglas-Peucker optimization. " +
 		"Generally, a smaller epsilon value will result in a more detailed shape, while a larger epsilon value will " +
@@ -146,9 +147,20 @@ func getDefaultOutputFilename() string {
 
 func getInputReader() io.ReadSeeker {
 	args := flag.Args()
+
+
 	if len(args) == 0 {
 		panic(errors.New("no input file specified"))
 	}
+    stdInCheck := args[0] 
+	if stdInCheck == "-" {
+		data, err := io.ReadAll(os.Stdin)
+		if err != nil {
+			panic(err)
+		}
+		return bytes.NewReader(data)
+	}
+
 	fileName := strings.Join(args, " ")
 	f, err := os.Open(fileName)
 	if err != nil {
