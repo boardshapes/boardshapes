@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"flag"
 	"fmt"
@@ -12,7 +13,8 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"	
+	"strings"
+
 	"github.com/boardshapes/boardshapes"
 	"github.com/boardshapes/boardshapes/serialization"
 )
