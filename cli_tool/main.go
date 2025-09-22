@@ -12,8 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
-	"syscall/js"
+	"strings"	
 	"github.com/boardshapes/boardshapes"
 	"github.com/boardshapes/boardshapes/serialization"
 )
