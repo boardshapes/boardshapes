@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"flag"
 	"fmt"
@@ -19,40 +20,40 @@ import (
 )
 
 var resizeImage string
-var outputSimplifiedImagePath string
-var noShapes bool
+var mode string
 var binaryOutput bool
 var outputPath string
 var useStdOut bool
 var optimizeShapeEpsilon float64
 
 func init() {
-	const resizeFlagDescription = "Resize the image to fit a specific size while maintaining aspect ratio. " +
+	const resizeFlagDescription = "Resize any input image to fit a specific size while maintaining aspect ratio. " +
 		"Value should be in the format [width]x[height] where both width and height " +
 		"are optional and can be left empty. If neither are specified, it will default to 1920x1080."
 	flag.StringVar(&resizeImage, "r", "no", resizeFlagDescription)
 	flag.StringVar(&resizeImage, "resize", "no", resizeFlagDescription)
 
-	const outputSimplifiedFlagDescription = "If set to a valid filepath, the simplified image generated will " +
-		"be output to that filepath."
-	flag.StringVar(&outputSimplifiedImagePath, "s", "", outputSimplifiedFlagDescription)
-	flag.StringVar(&outputSimplifiedImagePath, "output-simplified", "", outputSimplifiedFlagDescription)
-
-	const noShapesFlagDescription = "Skips the shape generation step and does not output any shape data."
-	flag.BoolVar(&noShapes, "x", false, noShapesFlagDescription)
-	flag.BoolVar(&noShapes, "no-shapes", false, noShapesFlagDescription)
+	const modeFlagDescription = "Determines what operation should be performed:\n" +
+		"- \"g\"/\"generate\" (default) -> Generate shapes from an image file and output serialized Boardshapes data." +
+		"- \"r\"/\"reserialize\" -> Deserialize data from a Boardshapes data file and then output the data after serializing it again. " +
+		"Useful for converting between binary and JSON formats or upgrading old Boardshapes data to the latest version." +
+		"- \"s\"/\"simplify\" -> Simplifies the color palette of an image file, giving you a preview of what color " +
+		"each pixel is classified as when generating shapes."
+	flag.StringVar(&mode, "m", "generate", modeFlagDescription)
+	flag.StringVar(&mode, "mode", "generate", modeFlagDescription)
 
 	const binaryFlagDescription = "Serializes shape data to the binary format instead of JSON."
 	flag.BoolVar(&binaryOutput, "b", false, binaryFlagDescription)
 	flag.BoolVar(&binaryOutput, "binary", false, binaryFlagDescription)
 
 	const outputFileFlagDescription = "Path to the output file"
-	flag.StringVar(&outputPath, "o", "output.bshapes", outputFileFlagDescription)
-	flag.StringVar(&outputPath, "output", "output.bshapes", outputFileFlagDescription)
+	flag.StringVar(&outputPath, "o", "", outputFileFlagDescription)
+	flag.StringVar(&outputPath, "output", "", outputFileFlagDescription)
 
 	const useStdOutFlagDescription = "If set, the output will be written to stdout instead of a file."
 	flag.BoolVar(&useStdOut, "c", false, useStdOutFlagDescription)
 	flag.BoolVar(&useStdOut, "stdout", false, useStdOutFlagDescription)
+
 
 	const optimizeShapeEpsilonDescription = "Sets the epsilon value for the Ramer-Douglas-Peucker optimization. " +
 		"Generally, a smaller epsilon value will result in a more detailed shape, while a larger epsilon value will " +
@@ -63,31 +64,32 @@ func init() {
 }
 
 func main() {
-
 	flag.Parse()
-	fileInput := flag.Args()
-	img, err := decodeImageFromFile(fileInput)
 
-	if err != nil {
-		panic(err)
+	w, shouldClose := getOutputWriter()
+	if shouldClose {
+		defer w.Close()
 	}
 
-	img = resize(img)
-
-	outputSimpified(outputSimplifiedImagePath, img)
-
-	if !noShapes {
+	switch mode {
+	case "g", "generate":
+		img := getInputImage()
 		boardShapesData := boardshapes.CreateShapes(img, boardshapes.ShapeCreationOptions{
 			EpsilonRDP: optimizeShapeEpsilon,
 		})
 
-		w, shouldClose := getOutputWriter()
-		if shouldClose {
-			defer w.Close()
-		}
-
 		serializeDataToWriter(w, boardShapesData)
+	case "s", "simplify":
+		img := getInputImage()
+		outputSimplifiedImageToWriter(w, img)
+	case "r", "reserialize":
+		var boardShapesData *boardshapes.BoardshapesData
+		boardShapesData = getInputData()
+		serializeDataToWriter(w, boardShapesData)
+	default:
+		log.Fatalf("unknown mode: %s\n", mode)
 	}
+
 }
 
 func serializeDataToWriter(w io.Writer, boardShapesData *boardshapes.BoardshapesData) {
@@ -105,10 +107,18 @@ func serializeDataToWriter(w io.Writer, boardShapesData *boardshapes.Boardshapes
 }
 
 func getOutputWriter() (w io.WriteCloser, shouldClose bool) {
+	if outputPath == "" {
+		outputPath = getDefaultOutputFilename()
+	}
 	if useStdOut {
 		w = os.Stdout
 		shouldClose = false
 	} else {
+		err := os.MkdirAll(filepath.Dir(outputPath), 0755)
+		if err != nil {
+			panic(err)
+		}
+
 		f, err := os.Create(outputPath)
 		if err != nil {
 			panic(err)
@@ -116,55 +126,127 @@ func getOutputWriter() (w io.WriteCloser, shouldClose bool) {
 		w = f
 		shouldClose = true
 	}
+
 	return
 }
 
-func decodeImageFromFile(fileInput []string) (image.Image, error) {
-	joinedFileName := strings.Join(fileInput, "")
-
-	fileTaken, err := os.Open(joinedFileName)
-	if err != nil {
-		panic(err)
+func getDefaultOutputFilename() string {
+	switch mode {
+	case "g", "generate", "r", "reserialize":
+		if binaryOutput {
+			return "output.bshapes"
+		} else {
+			return "output.jshapes"
+		}
+	case "s", "simplify":
+		return "output.png"
+	default:
+		log.Fatalf("unknown mode: %s\n", mode)
+		return ""
 	}
-	defer fileTaken.Close()
+}
 
-	fileExtension := filepath.Ext(joinedFileName)
-	if fileExtension == ".jpg" {
-		fileExtension = ".jpeg"
+func getInputReader() io.ReadSeeker {
+	args := flag.Args()
+
+
+	if len(args) == 0 {
+		panic(errors.New("no input file specified"))
 	}
-	if fileExtension == ".png" || fileExtension == ".jpeg" {
-		img, _, err := image.Decode(fileTaken)
+    stdInCheck := args[0] 
+	if stdInCheck == "-" {
+		data, err := io.ReadAll(os.Stdin)
 		if err != nil {
 			panic(err)
 		}
-
-		return img, nil
+		return bytes.NewReader(data)
 	}
-	return nil, fmt.Errorf("unsuppported file format")
+
+	fileName := strings.Join(args, " ")
+	f, err := os.Open(fileName)
+	if err != nil {
+		panic(err)
+	}
+	return f
 }
 
-func encodeImageToFile(img image.Image, outPath string) *os.File {
-	err := os.MkdirAll(filepath.Dir(outPath), 0755)
+func getInputImage() image.Image {
+	r := getInputReader()
+
+	img := decodeImageFromFile(r)
+	img = resize(img)
+	return img
+}
+
+func getInputData() *boardshapes.BoardshapesData {
+	r := getInputReader()
+
+	boardShapesData := deserializeBoardshapesData(r)
+	return boardShapesData
+}
+
+func deserializeBoardshapesData(r io.ReadSeeker) *boardshapes.BoardshapesData {
+	var boardShapesData *boardshapes.BoardshapesData
+	var err error
+
+	format := detectDataFormat(r)
+	switch format {
+	case "json":
+		boardShapesData, err = serialization.JsonDeserialize(r, nil)
+		if err != nil {
+			panic(err)
+		}
+	case "binary":
+		boardShapesData, err = serialization.BinaryDeserialize(r, nil)
+		if err != nil {
+			panic(err)
+		}
+	default:
+		log.Fatalf("unknown data format: %s\n", format)
+	}
+
+	return boardShapesData
+}
+
+// todo: this should probably be in the serialization package.
+func detectDataFormat(r io.ReadSeeker) string {
+	buf := make([]byte, 1)
+	_, err := r.Read(buf)
 	if err != nil {
 		panic(err)
 	}
-	outputFile, err := os.Create(outPath)
+	r.Seek(-1, io.SeekCurrent)
+
+	if buf[0] == '{' {
+		return "json"
+	} else {
+		return "binary"
+	}
+}
+
+func decodeImageFromFile(r io.Reader) image.Image {
+	img, _, err := image.Decode(r)
 	if err != nil {
 		panic(err)
 	}
 
-	ext := strings.ToLower(filepath.Ext(outPath))
+	return img
+}
+
+func encodeImageToWriter(w io.Writer, img image.Image) {
+	ext := strings.ToLower(filepath.Ext(outputPath))
+	var err error
 	switch ext {
 	case ".png":
-		err = png.Encode(outputFile, img)
+		err = png.Encode(w, img)
 	case ".jpeg", ".jpg":
-		err = jpeg.Encode(outputFile, img, &jpeg.Options{Quality: 100})
+		err = jpeg.Encode(w, img, &jpeg.Options{Quality: 100})
+	default:
+		err = fmt.Errorf("unsupported file format: %s", ext)
 	}
 	if err != nil {
 		panic(err)
 	}
-	log.Printf("Output file path: %s\n", outPath)
-	return outputFile
 }
 
 func resize(img image.Image) image.Image {
@@ -203,10 +285,8 @@ func resize(img image.Image) image.Image {
 	return img
 }
 
-func outputSimpified(outputSimplifiedImagePath string, img image.Image) {
-	if outputSimplifiedImagePath != "" {
-		simplifiedImage := boardshapes.SimplifyImage(img, boardshapes.ShapeCreationOptions{EpsilonRDP: optimizeShapeEpsilon})
+func outputSimplifiedImageToWriter(w io.Writer, img image.Image) {
+	simplifiedImage := boardshapes.SimplifyImage(img, boardshapes.ShapeCreationOptions{EpsilonRDP: optimizeShapeEpsilon})
 
-		encodeImageToFile(simplifiedImage, outputSimplifiedImagePath)
-	}
+	encodeImageToWriter(w, simplifiedImage)
 }
