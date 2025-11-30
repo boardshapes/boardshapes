@@ -12,7 +12,7 @@ import (
 	"golang.org/x/image/draw"
 )
 
-const VERSION = "0.1.0"
+const VERSION = "0.1.1"
 
 // func manhattanDistance(a Vertex, b Vertex) int {
 // 	return absDiff(int(a.X), int(b.X)) + absDiff(int(a.Y), int(b.Y))

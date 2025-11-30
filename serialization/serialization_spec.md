@@ -1,6 +1,6 @@
 # Boardshapes Serialization Specification
 
-**For Version 0.1.0**
+**For Version 0.1.1**
 
 This is the specification for the formats that Boardshapes data can be serialized to and serialized from.
 
@@ -168,7 +168,7 @@ The JSON format is a straightforward, human-readable representation of Boardshap
 
 A serialized Boardshapes dataset in JSON is an object with the following fields:
 
-- `version` (string): The version of the Boardshapes format (e.g., `"0.1.0"`).
+- `version` (string): The version of the Boardshapes format (e.g., `"0.1.1"`).
 - `shapes` (array): An array of shape objects, each representing a single shape.
 
 Each shape object contains:
@@ -185,7 +185,7 @@ Each shape object contains:
 
 ```json
 {
-  "version": "0.1.0",
+  "version": "0.1.1",
   "shapes": [
     {
       "number": 0,
