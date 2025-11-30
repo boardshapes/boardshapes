@@ -25,6 +25,7 @@ var binaryOutput bool
 var outputPath string
 var useStdOut bool
 var optimizeShapeEpsilon float64
+var maxInputLength int
 
 func init() {
 	const resizeFlagDescription = "Resize any input image to fit a specific size while maintaining aspect ratio. " +
@@ -54,13 +55,18 @@ func init() {
 	flag.BoolVar(&useStdOut, "c", false, useStdOutFlagDescription)
 	flag.BoolVar(&useStdOut, "stdout", false, useStdOutFlagDescription)
 
-
 	const optimizeShapeEpsilonDescription = "Sets the epsilon value for the Ramer-Douglas-Peucker optimization. " +
 		"Generally, a smaller epsilon value will result in a more detailed shape, while a larger epsilon value will " +
 		"result in a less complex shape. Will use the default epsilon value if not specified or set to 0." +
 		"Will skip RDP optimization entirely if set to a negative value, but will never skip basic straight-line optimization."
 	flag.Float64Var(&optimizeShapeEpsilon, "e", 0.0, optimizeShapeEpsilonDescription)
 	flag.Float64Var(&optimizeShapeEpsilon, "epsilon", 0.0, optimizeShapeEpsilonDescription)
+
+	const maxInputLengthDescription = "Sets the maximum number of bytes received through standard input. " +
+		"If set to a non-zero value, the program will continue reading from standard input until " +
+		"the limit is reached or EOF, rather than only reading until EOF."
+	flag.IntVar(&maxInputLength, "l", 0, maxInputLengthDescription)
+	flag.IntVar(&maxInputLength, "length", 0, maxInputLengthDescription)
 }
 
 func main() {
@@ -149,13 +155,17 @@ func getDefaultOutputFilename() string {
 func getInputReader() io.ReadSeeker {
 	args := flag.Args()
 
-
 	if len(args) == 0 {
 		panic(errors.New("no input file specified"))
 	}
-    stdInCheck := args[0] 
+	stdInCheck := args[0]
 	if stdInCheck == "-" {
-		data, err := io.ReadAll(os.Stdin)
+		var r io.Reader = os.Stdin
+		if maxInputLength > 0 {
+			r = io.LimitReader(r, int64(maxInputLength))
+		}
+
+		data, err := io.ReadAll(r)
 		if err != nil {
 			panic(err)
 		}
