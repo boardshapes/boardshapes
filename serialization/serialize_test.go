@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	main "github.com/boardshapes/boardshapes"
+	"github.com/boardshapes/boardshapes/data"
 )
 
 func loadImage(filepath string) image.Image {
@@ -26,7 +27,7 @@ func loadImage(filepath string) image.Image {
 
 func TestBinarySerialization(t *testing.T) {
 	type args struct {
-		data    main.BoardshapesData
+		data    data.BoardshapesData
 		options *SerializationOptions
 	}
 	tests := []struct {
@@ -37,7 +38,7 @@ func TestBinarySerialization(t *testing.T) {
 			name: "no-masks",
 			args: args{
 				data: *main.CreateShapes(
-					loadImage("../test_images/lub.png"),
+					loadImage("./test_images/lub.png"),
 					main.ShapeCreationOptions{}),
 				options: &SerializationOptions{
 					UseMasks: false,
@@ -48,7 +49,7 @@ func TestBinarySerialization(t *testing.T) {
 			name: "masks",
 			args: args{
 				data: *main.CreateShapes(
-					loadImage("../test_images/lub.png"),
+					loadImage("./test_images/lub.png"),
 					main.ShapeCreationOptions{}),
 				options: &SerializationOptions{
 					UseMasks: true,
@@ -81,7 +82,7 @@ func TestBinarySerialization(t *testing.T) {
 
 func TestJsonSerialization(t *testing.T) {
 	type args struct {
-		data    main.BoardshapesData
+		data    data.BoardshapesData
 		options *SerializationOptions
 	}
 	tests := []struct {
@@ -92,7 +93,7 @@ func TestJsonSerialization(t *testing.T) {
 			name: "lub",
 			args: args{
 				data: *main.CreateShapes(
-					loadImage("../test_images/lub.png"),
+					loadImage("./test_images/lub.png"),
 					main.ShapeCreationOptions{}),
 				options: &SerializationOptions{
 					UseMasks: false,
@@ -102,14 +103,14 @@ func TestJsonSerialization(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			data := tt.args.data
+			boardshapesData := tt.args.data
 			w := &bytes.Buffer{}
-			err := JsonSerialize(w, &data)
+			err := JsonSerialize(w, &boardshapesData)
 			if err != nil {
 				t.Errorf("JsonSerialize() error = %v", err)
 				return
 			}
-			t.Logf("serialized shapes: %d", len(data.Shapes))
+			t.Logf("serialized shapes: %d", len(boardshapesData.Shapes))
 
 			result, err := JsonDeserialize(w, nil)
 			if err != nil {
@@ -117,7 +118,7 @@ func TestJsonSerialization(t *testing.T) {
 			}
 			t.Logf("deserialized shapes: %d", len(result.Shapes))
 
-			if equal, reason := data.Equal(*result); !equal {
+			if equal, reason := boardshapesData.Equal(*result); !equal {
 				t.Errorf("Data mismatch: %v", reason)
 			}
 		})

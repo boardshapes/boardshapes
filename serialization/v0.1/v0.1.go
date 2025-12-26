@@ -11,7 +11,10 @@ import (
 	"image/png"
 	"io"
 
-	main "github.com/boardshapes/boardshapes"
+	"github.com/boardshapes/boardshapes/colors"
+	"github.com/boardshapes/boardshapes/data"
+	"github.com/boardshapes/boardshapes/geometry"
+	"github.com/boardshapes/boardshapes/imageops"
 	"github.com/boardshapes/boardshapes/serialization/shared"
 )
 
@@ -24,8 +27,8 @@ const (
 	CHUNK_SHAPE_MASK     = 11
 )
 
-func BinaryDeserialize(r io.Reader, options map[string]any) (*main.BoardshapesData, error) {
-	data := &main.BoardshapesData{}
+func BinaryDeserialize(r io.Reader, options map[string]any) (*data.BoardshapesData, error) {
+	boardshapesData := &data.BoardshapesData{}
 	var baseImage image.Image
 	if img, ok := options["baseImage"].(image.Image); ok {
 		baseImage = img
@@ -37,8 +40,8 @@ func BinaryDeserialize(r io.Reader, options map[string]any) (*main.BoardshapesDa
 		return nil, err
 	}
 
-	colors := make(map[color.NRGBA]string, 0)
-	shapes := make(map[int]main.ShapeData, 0)
+	colorNames := make(map[color.NRGBA]string, 0)
+	shapes := make(map[int]data.ShapeData, 0)
 	shapesUsingMasks := make([]int, 0)
 	for {
 		chunkId, err := buf.ReadByte()
@@ -55,7 +58,7 @@ func BinaryDeserialize(r io.Reader, options map[string]any) (*main.BoardshapesDa
 				return nil, err
 			}
 			version = shared.TrimNullByte(version)
-			data.Version = version
+			boardshapesData.Version = version
 		case CHUNK_COLOR_TABLE:
 			nColors := new(uint32)
 			binary.Read(&buf, binary.BigEndian, nColors)
@@ -71,16 +74,16 @@ func BinaryDeserialize(r io.Reader, options map[string]any) (*main.BoardshapesDa
 					return nil, err
 				}
 				colorName = shared.TrimNullByte(colorName)
-				colors[color.NRGBA{R: r, G: g, B: b, A: a}] = colorName
+				colorNames[color.NRGBA{R: r, G: g, B: b, A: a}] = colorName
 			}
 		case CHUNK_SHAPE_GEOMETRY, CHUNK_SHAPE_COLOR, CHUNK_SHAPE_IMAGE, CHUNK_SHAPE_MASK: // shape chunks
-			var shape main.ShapeData
+			var shape data.ShapeData
 			var inShapesMap bool
 			shapeNumber := new(uint32)
 			binary.Read(&buf, binary.BigEndian, shapeNumber)
 
 			if shape, inShapesMap = shapes[int(*shapeNumber)]; !inShapesMap {
-				shape = main.ShapeData{
+				shape = data.ShapeData{
 					Number: int(*shapeNumber),
 				}
 			}
@@ -97,7 +100,7 @@ func BinaryDeserialize(r io.Reader, options map[string]any) (*main.BoardshapesDa
 				shape.CornerX = int(cornerX)
 				shape.CornerY = int(cornerY)
 
-				path := make([]main.Vertex, nVertices)
+				path := make([]geometry.Vertex, nVertices)
 				for i := range nVertices {
 					bv := make([]byte, 4)
 					_, err := buf.Read(bv)
@@ -105,7 +108,7 @@ func BinaryDeserialize(r io.Reader, options map[string]any) (*main.BoardshapesDa
 						return nil, err
 					}
 					x, y := binary.BigEndian.Uint16(bv[0:2]), binary.BigEndian.Uint16(bv[2:4])
-					path[i] = main.Vertex{X: uint16(x), Y: uint16(y)}
+					path[i] = geometry.Vertex{X: uint16(x), Y: uint16(y)}
 				}
 
 				shape.Path = path
@@ -168,9 +171,9 @@ func BinaryDeserialize(r io.Reader, options map[string]any) (*main.BoardshapesDa
 				for _, rl := range runLengths {
 					for range rl {
 						if filled {
-							img.Set(i%int(*width), i/int(*width), main.Black)
+							img.Set(i%int(*width), i/int(*width), colors.Black)
 						} else {
-							img.Set(i%int(*width), i/int(*width), main.Blank)
+							img.Set(i%int(*width), i/int(*width), colors.Blank)
 						}
 						i++
 					}
@@ -188,7 +191,7 @@ func BinaryDeserialize(r io.Reader, options map[string]any) (*main.BoardshapesDa
 	// add color names to shapes
 	for i, shape := range shapes {
 		if shape.Color != nil {
-			colorName, ok := colors[main.GetNRGBA(shape.Color)]
+			colorName, ok := colorNames[colors.GetNRGBA(shape.Color)]
 			if ok {
 				shape.ColorName = colorName
 				shapes[i] = shape
@@ -196,13 +199,13 @@ func BinaryDeserialize(r io.Reader, options map[string]any) (*main.BoardshapesDa
 		}
 	}
 
-	var getPixelColor func(x, y int, shape main.ShapeData) color.Color
+	var getPixelColor func(x, y int, shape data.ShapeData) color.Color
 	if baseImage != nil {
-		getPixelColor = func(x, y int, shape main.ShapeData) color.Color {
+		getPixelColor = func(x, y int, shape data.ShapeData) color.Color {
 			return baseImage.At(shape.CornerX+x, shape.CornerY+y)
 		}
 	} else {
-		getPixelColor = func(_, _ int, shape main.ShapeData) color.Color {
+		getPixelColor = func(_, _ int, shape data.ShapeData) color.Color {
 			return shape.Color
 		}
 	}
@@ -210,7 +213,7 @@ func BinaryDeserialize(r io.Reader, options map[string]any) (*main.BoardshapesDa
 	// restore color to shapes using masks
 	for _, shapeNumber := range shapesUsingMasks {
 		shape := shapes[shapeNumber]
-		img, ok := shape.Image.(main.SettableImage)
+		img, ok := shape.Image.(imageops.SettableImage)
 		if ok {
 			for y := 0; y < img.Bounds().Dy(); y++ {
 				for x := 0; x < img.Bounds().Dx(); x++ {
@@ -222,12 +225,12 @@ func BinaryDeserialize(r io.Reader, options map[string]any) (*main.BoardshapesDa
 		}
 	}
 
-	data.Shapes = make([]main.ShapeData, 0, len(shapes))
+	boardshapesData.Shapes = make([]data.ShapeData, 0, len(shapes))
 	for _, shape := range shapes {
-		data.Shapes = append(data.Shapes, shape)
+		boardshapesData.Shapes = append(boardshapesData.Shapes, shape)
 	}
 
-	return data, nil
+	return boardshapesData, nil
 }
 
 type JSONData struct {
@@ -245,21 +248,21 @@ type JSONShapeData struct {
 	Image       string      `json:"image"`
 }
 
-func JsonDeserialize(r io.Reader, options map[string]any) (*main.BoardshapesData, error) {
+func JsonDeserialize(r io.Reader, options map[string]any) (*data.BoardshapesData, error) {
 	var jsonData JSONData
 	if err := json.NewDecoder(r).Decode(&jsonData); err != nil {
 		return nil, err
 	}
 
-	data := &main.BoardshapesData{
+	boardshapesData := &data.BoardshapesData{
 		Version: jsonData.Version,
-		Shapes:  make([]main.ShapeData, len(jsonData.Shapes)),
+		Shapes:  make([]data.ShapeData, len(jsonData.Shapes)),
 	}
 
 	for i, jsonShape := range jsonData.Shapes {
-		path := make([]main.Vertex, len(jsonShape.Shape)/2)
+		path := make([]geometry.Vertex, len(jsonShape.Shape)/2)
 		for j := range path {
-			path[j] = main.Vertex{
+			path[j] = geometry.Vertex{
 				X: jsonShape.Shape[j*2],
 				Y: jsonShape.Shape[j*2+1],
 			}
@@ -277,7 +280,7 @@ func JsonDeserialize(r io.Reader, options map[string]any) (*main.BoardshapesData
 			}
 		}
 
-		data.Shapes[i] = main.ShapeData{
+		boardshapesData.Shapes[i] = data.ShapeData{
 			Number:    jsonShape.Number,
 			CornerX:   jsonShape.CornerX,
 			CornerY:   jsonShape.CornerY,
@@ -288,5 +291,5 @@ func JsonDeserialize(r io.Reader, options map[string]any) (*main.BoardshapesData
 		}
 	}
 
-	return data, nil
+	return boardshapesData, nil
 }

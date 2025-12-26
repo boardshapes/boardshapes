@@ -2,9 +2,15 @@ name: Go
 
 on:
   push:
-    branches: [ "master" ]
+    branches:
+      - 'master'
+      - 'v*.*.*'
+      - 'v*.*.*-*'
   pull_request:
-    branches: [ "master" ]
+    branches:
+      - 'master'
+      - 'v*.*.*'
+      - 'v*.*.*-*'
 
 jobs:
 
