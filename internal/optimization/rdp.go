@@ -6,13 +6,13 @@ import (
 	"github.com/boardshapes/boardshapes/geometry"
 )
 
-const DEFAULT_RDP_EPSILON = 10.0
+const defaultRdpEpsilon = 10.0
 
 func OptimizeShape(sortedVertexShape []geometry.Vertex) []geometry.Vertex {
-	return OptimizeShapeWithEpsilon(sortedVertexShape, DEFAULT_RDP_EPSILON)
+	return OptimizeShapeWithEpsilon(sortedVertexShape, defaultRdpEpsilon)
 }
 
-const MINIMUM_VERTICES_FOR_RDP = 15
+const minimumVerticesForRdp = 15
 
 func OptimizeShapeWithEpsilon(sortedVertexShape []geometry.Vertex, epsilon float64) []geometry.Vertex {
 	//Try optimizing straight lines
@@ -32,7 +32,7 @@ func OptimizeShapeWithEpsilon(sortedVertexShape []geometry.Vertex, epsilon float
 	}
 
 	//Check number of vertices after straight optimization to determine if RDP is needed
-	if len(optimizedShape) > MINIMUM_VERTICES_FOR_RDP {
+	if len(optimizedShape) > minimumVerticesForRdp {
 		//Split shape in half by finding furthest geometry.Vertex from the startpoint
 		distance := 0.0
 		furthest := 0
