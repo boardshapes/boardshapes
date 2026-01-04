@@ -64,7 +64,7 @@ func BinarySerialize(w io.Writer, data *data.BoardshapesData, options *Serializa
 	var buf bytes.Buffer
 
 	// write version chunk
-	chunk := append([]byte{CHUNK_VERSION}, append([]byte(main.VERSION), 0)...)
+	chunk := append([]byte{CHUNK_VERSION}, append([]byte(main.Version), 0)...)
 	_, err := buf.Write(chunk)
 	if err != nil {
 		return err

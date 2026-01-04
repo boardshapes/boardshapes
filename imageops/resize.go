@@ -9,10 +9,10 @@ import (
 
 // Resizes the image to the default 1920x1080. Uses [ResizeImageTo].
 func ResizeImage(img image.Image) image.Image {
-	const MAX_HEIGHT = 1080
-	const MAX_WIDTH = 1920
+	const maxHeight = 1080
+	const maxWidth = 1920
 
-	return ResizeImageTo(img, MAX_WIDTH, MAX_HEIGHT)
+	return ResizeImageTo(img, maxWidth, maxHeight)
 }
 
 // Constrains the image to the given dimensions, preserving aspect ratio.

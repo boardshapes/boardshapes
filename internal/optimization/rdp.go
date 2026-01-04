@@ -6,22 +6,23 @@ import (
 	"github.com/boardshapes/boardshapes/geometry"
 )
 
-const DEFAULT_RDP_EPSILON = 10.0
+const defaultRdpEpsilon = 2.0
 
 func OptimizeShape(sortedVertexShape []geometry.Vertex) []geometry.Vertex {
-	return OptimizeShapeWithEpsilon(sortedVertexShape, DEFAULT_RDP_EPSILON)
+	return OptimizeShapeWithEpsilon(sortedVertexShape, defaultRdpEpsilon)
 }
 
-const MINIMUM_VERTICES_FOR_RDP = 15
+const minimumVerticesForRdp = 6
 
 func OptimizeShapeWithEpsilon(sortedVertexShape []geometry.Vertex, epsilon float64) []geometry.Vertex {
 	//Try optimizing straight lines
-	var optimizedShape []geometry.Vertex
-	for i := 2; i < len(sortedVertexShape); i++ {
-		x1, y1 := sortedVertexShape[i-2].DirectionTo(sortedVertexShape[i-1])
-		x2, y2 := sortedVertexShape[i-1].DirectionTo(sortedVertexShape[i])
-		if x1 == x2 && y1 == y2 {
-			optimizedShape = append(sortedVertexShape[:i-1], sortedVertexShape[i:]...)
+	optimizedShape := make([]geometry.Vertex, len(sortedVertexShape))
+	copy(optimizedShape, sortedVertexShape)
+	for i := 2; i < len(optimizedShape); i++ {
+		v1 := optimizedShape[i-2].ToVertexF().DirectionTo(optimizedShape[i-1].ToVertexF())
+		v2 := optimizedShape[i-1].ToVertexF().DirectionTo(optimizedShape[i].ToVertexF())
+		if v1 == v2 {
+			optimizedShape = append(optimizedShape[:i-1], optimizedShape[i:]...)
 			i--
 		}
 	}
@@ -32,14 +33,13 @@ func OptimizeShapeWithEpsilon(sortedVertexShape []geometry.Vertex, epsilon float
 	}
 
 	//Check number of vertices after straight optimization to determine if RDP is needed
-	if len(optimizedShape) > MINIMUM_VERTICES_FOR_RDP {
+	if len(optimizedShape) > minimumVerticesForRdp {
 		//Split shape in half by finding furthest geometry.Vertex from the startpoint
+		startP := sortedVertexShape[0].ToVertexF()
 		distance := 0.0
 		furthest := 0
-		for i := range len(sortedVertexShape) {
-			//Euclidean Distance
-			dx, dy := sortedVertexShape[0].X-sortedVertexShape[i].X, sortedVertexShape[0].Y-sortedVertexShape[i].Y
-			d := math.Sqrt(float64(dx*dx + dy*dy))
+		for i := range sortedVertexShape {
+			d := startP.DistanceTo(sortedVertexShape[i].ToVertexF())
 			if d >= distance {
 				furthest = i
 				distance = d
@@ -73,11 +73,10 @@ func RDPOptimizer(sortedVertexShape []geometry.Vertex, epsilon float64) []geomet
 	maxD := -1.0
 	p1 := sortedVertexShape[0]
 	p2 := sortedVertexShape[end]
-	xDiff := p2.X - p1.X
-	yDiff := p2.Y - p1.Y
+	perpDir := p1.ToVertexF().DirectionTo(p2.ToVertexF()).Rotate90CCW()
 	for i, p := range sortedVertexShape[1:end] {
 		//Perpendicular Distance
-		d := math.Abs(float64(yDiff*p.X - xDiff*p.Y + p2.X*p1.Y - p2.Y*p1.X))
+		d := math.Abs(p.ToVertexF().Sub(p1.ToVertexF()).Dot(perpDir))
 		if d > maxD {
 			start = i + 1
 			maxD = d

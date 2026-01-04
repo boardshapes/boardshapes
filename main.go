@@ -11,7 +11,7 @@ import (
 	"github.com/boardshapes/boardshapes/internal/regions"
 )
 
-const VERSION = "0.1.1"
+const Version = "0.1.1"
 
 type ShapeCreationOptions struct {
 	NoColorSeparation,
@@ -22,13 +22,13 @@ type ShapeCreationOptions struct {
 }
 
 func isRegionLargeEnough(region *regions.Region) bool {
-	const MINIMUM_NUMBER_OF_PIXELS_FOR_NON_SMALL_REGION = 50
-	return len(*region) >= MINIMUM_NUMBER_OF_PIXELS_FOR_NON_SMALL_REGION
+	const minimumNumberOfPixelsForNonSmallRegion = 50
+	return len(*region) >= minimumNumberOfPixelsForNonSmallRegion
 }
 
 func CreateShapes(img image.Image, opts ShapeCreationOptions) (boardshapesData *data.BoardshapesData) {
 	boardshapesData = &data.BoardshapesData{
-		Version: VERSION,
+		Version: Version,
 	}
 
 	img = imageops.ResizeImage(img)
