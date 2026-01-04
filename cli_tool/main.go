@@ -16,6 +16,8 @@ import (
 	"strings"
 
 	"github.com/boardshapes/boardshapes"
+	"github.com/boardshapes/boardshapes/data"
+	"github.com/boardshapes/boardshapes/imageops"
 	"github.com/boardshapes/boardshapes/serialization"
 )
 
@@ -89,7 +91,7 @@ func main() {
 		img := getInputImage()
 		outputSimplifiedImageToWriter(w, img)
 	case "r", "reserialize":
-		var boardShapesData *boardshapes.BoardshapesData
+		var boardShapesData *data.BoardshapesData
 		boardShapesData = getInputData()
 		serializeDataToWriter(w, boardShapesData)
 	default:
@@ -98,7 +100,7 @@ func main() {
 
 }
 
-func serializeDataToWriter(w io.Writer, boardShapesData *boardshapes.BoardshapesData) {
+func serializeDataToWriter(w io.Writer, boardShapesData *data.BoardshapesData) {
 	if binaryOutput {
 		err := serialization.BinarySerialize(w, boardShapesData, nil)
 		if err != nil {
@@ -188,15 +190,15 @@ func getInputImage() image.Image {
 	return img
 }
 
-func getInputData() *boardshapes.BoardshapesData {
+func getInputData() *data.BoardshapesData {
 	r := getInputReader()
 
 	boardShapesData := deserializeBoardshapesData(r)
 	return boardShapesData
 }
 
-func deserializeBoardshapesData(r io.ReadSeeker) *boardshapes.BoardshapesData {
-	var boardShapesData *boardshapes.BoardshapesData
+func deserializeBoardshapesData(r io.ReadSeeker) *data.BoardshapesData {
+	var boardShapesData *data.BoardshapesData
 	var err error
 
 	format := detectDataFormat(r)
@@ -263,7 +265,7 @@ func resize(img image.Image) image.Image {
 
 	if resizeImage != "no" {
 		if resizeImage == "" {
-			img = boardshapes.ResizeImage(img)
+			img = imageops.ResizeImage(img)
 		}
 		dimensions := strings.Split(resizeImage, "x")
 		var width, height int
@@ -285,9 +287,9 @@ func resize(img image.Image) image.Image {
 			}
 		}
 		if width == 0 && height == 0 {
-			img = boardshapes.ResizeImage(img)
+			img = imageops.ResizeImage(img)
 		} else {
-			img = boardshapes.ResizeImageTo(img, width, height)
+			img = imageops.ResizeImageTo(img, width, height)
 		}
 
 		return img
@@ -296,7 +298,7 @@ func resize(img image.Image) image.Image {
 }
 
 func outputSimplifiedImageToWriter(w io.Writer, img image.Image) {
-	simplifiedImage := boardshapes.SimplifyImage(img, boardshapes.ShapeCreationOptions{EpsilonRDP: optimizeShapeEpsilon})
+	simplifiedImage := imageops.SimplifyImage(img, imageops.ImageSimplificationOptions{})
 
 	encodeImageToWriter(w, simplifiedImage)
 }

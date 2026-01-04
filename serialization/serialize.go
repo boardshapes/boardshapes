@@ -12,6 +12,8 @@ import (
 	"strings"
 
 	main "github.com/boardshapes/boardshapes"
+	"github.com/boardshapes/boardshapes/colors"
+	"github.com/boardshapes/boardshapes/data"
 	v0_1 "github.com/boardshapes/boardshapes/serialization/v0.1"
 )
 
@@ -24,8 +26,8 @@ const (
 	CHUNK_SHAPE_MASK     = 11
 )
 
-type BinaryDeserializeFunc func(r io.Reader, options map[string]any) (*main.BoardshapesData, error)
-type JsonDeserializeFunc func(r io.Reader, options map[string]any) (*main.BoardshapesData, error)
+type BinaryDeserializeFunc func(r io.Reader, options map[string]any) (*data.BoardshapesData, error)
+type JsonDeserializeFunc func(r io.Reader, options map[string]any) (*data.BoardshapesData, error)
 
 // the byte is the chunk ID
 type ErrUnknownChunkType byte
@@ -54,7 +56,7 @@ var DefaultOptions = SerializationOptions{
 	UseMasks: true,
 }
 
-func BinarySerialize(w io.Writer, data *main.BoardshapesData, options *SerializationOptions) error {
+func BinarySerialize(w io.Writer, data *data.BoardshapesData, options *SerializationOptions) error {
 	if options == nil {
 		options = &DefaultOptions
 	}
@@ -68,20 +70,20 @@ func BinarySerialize(w io.Writer, data *main.BoardshapesData, options *Serializa
 		return err
 	}
 
-	// get all colors
-	colors := make(map[color.Color]string)
+	// get all colorNames
+	colorNames := make(map[color.Color]string)
 	for _, shape := range data.Shapes {
 		if shape.ColorName != "" {
-			colors[shape.Color] = shape.ColorName
+			colorNames[shape.Color] = shape.ColorName
 		}
 	}
 
 	// write color table chunk
 	chunk = []byte{CHUNK_COLOR_TABLE}
-	chunk = binary.BigEndian.AppendUint32(chunk, uint32(len(colors)))
+	chunk = binary.BigEndian.AppendUint32(chunk, uint32(len(colorNames)))
 
-	for color, name := range colors {
-		nrgba := main.GetNRGBA(color)
+	for color, name := range colorNames {
+		nrgba := colors.GetNRGBA(color)
 		chunk = append(chunk, nrgba.R, nrgba.G, nrgba.B, nrgba.A)
 		chunk = append(chunk, name...)
 		chunk = append(chunk, 0)
@@ -107,7 +109,7 @@ func BinarySerialize(w io.Writer, data *main.BoardshapesData, options *Serializa
 		}
 
 		// shape color chunk
-		nrgba := main.GetNRGBA(shape.Color)
+		nrgba := colors.GetNRGBA(shape.Color)
 		chunk = append(chunk, CHUNK_SHAPE_COLOR)
 		chunk = binary.BigEndian.AppendUint32(chunk, uint32(shape.Number))
 		chunk = append(chunk, nrgba.R, nrgba.G, nrgba.B, nrgba.A)
@@ -173,7 +175,7 @@ func BinarySerialize(w io.Writer, data *main.BoardshapesData, options *Serializa
 	return err
 }
 
-func BinaryDeserialize(r io.Reader, options map[string]any) (*main.BoardshapesData, error) {
+func BinaryDeserialize(r io.Reader, options map[string]any) (*data.BoardshapesData, error) {
 	var buf bytes.Buffer
 	_, err := buf.ReadFrom(r)
 	if err != nil {
@@ -219,7 +221,7 @@ type JSONShapeData struct {
 	Image       string      `json:"image"`
 }
 
-func JsonSerialize(w io.Writer, data *main.BoardshapesData) error {
+func JsonSerialize(w io.Writer, data *data.BoardshapesData) error {
 	jsonData := JSONData{
 		Version: data.Version,
 		Shapes:  make([]JSONShapeData, len(data.Shapes)),
@@ -246,7 +248,7 @@ func JsonSerialize(w io.Writer, data *main.BoardshapesData) error {
 			CornerX:     shape.CornerX,
 			CornerY:     shape.CornerY,
 			Shape:       points,
-			Color:       main.GetNRGBA(shape.Color),
+			Color:       colors.GetNRGBA(shape.Color),
 			ColorString: shape.ColorName,
 			Image:       imgBase64,
 		}
@@ -263,7 +265,7 @@ type JSONWithVersion struct {
 	Version string `json:"version"`
 }
 
-func JsonDeserialize(r io.Reader, options map[string]any) (*main.BoardshapesData, error) {
+func JsonDeserialize(r io.Reader, options map[string]any) (*data.BoardshapesData, error) {
 	var buf bytes.Buffer
 	_, err := buf.ReadFrom(r)
 	if err != nil {
