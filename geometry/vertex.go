@@ -1,6 +1,9 @@
 package geometry
 
-import "math"
+import (
+	"fmt"
+	"math"
+)
 
 type Vertex struct {
 	X uint16 `json:"x"`
@@ -26,6 +29,10 @@ func (v Vertex) ToVertexF() VertexF {
 		X: float64(v.X),
 		Y: float64(v.Y),
 	}
+}
+
+func (v Vertex) String() string {
+	return fmt.Sprintf("(%d, %d)", v.X, v.Y)
 }
 
 type VertexF struct {
@@ -83,4 +90,8 @@ func (v VertexF) ToVertex() Vertex {
 		X: uint16(math.Round(v.X)),
 		Y: uint16(math.Round(v.Y)),
 	}
+}
+
+func (v VertexF) String() string {
+	return fmt.Sprintf("(%.2f, %.2f)", v.X, v.Y)
 }
